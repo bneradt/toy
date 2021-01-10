@@ -3,11 +3,10 @@
 import argparse
 from argparse import RawTextHelpFormatter
 from string import ascii_lowercase, ascii_uppercase
-import json
 import os.path
 import sys
-import tempfile
-import zipfile
+
+DEFAULT_WORDS_FILE = "/usr/share/dict/words"
 
 description = """
 Create a word ladder given the first and last steps on the ladder and the
@@ -100,25 +99,6 @@ def make_ladders(first_word, last_word, num_steps, word_set):
     return ladders
 
 
-def extract_words_from_zip_file():
-    """
-    Extract the words_dictionary.zip file and return a set of the words
-    contained therein.
-    """
-    zip_filename = "words_dictionary.zip"
-
-    with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
-        with tempfile.TemporaryDirectory(prefix="word_ladder") as temp_directory:
-            zip_ref.extractall(temp_directory)
-
-            json_filename = "words_dictionary.json"
-            json_path = os.path.join(temp_directory, json_filename)
-
-            with open(json_path, 'r') as json_fd:
-                data = json.load(json_fd)
-                return set(data.keys())
-
-
 def parse_args():
     parser = argparse.ArgumentParser(description=description, formatter_class=RawTextHelpFormatter)
 
@@ -127,8 +107,11 @@ def parse_args():
     parser.add_argument('num_steps', type=int,
                         help='The number of steps in the ladder (not including first_word).')
 
-    parser.add_argument('--word-file', metavar='word_file', dest='word_file', type=argparse.FileType('r'),
-                        help='A file name containing the list of words to use. One word per line.')
+    parser.add_argument('--word-file', metavar='word_file', dest='word_file',
+                        type=argparse.FileType('r'),
+                        default=DEFAULT_WORDS_FILE,
+                        help='A file name containing the list of words to use. '
+                        'One word per line. Default: ' + DEFAULT_WORDS_FILE)
 
     args = parser.parse_args()
 
@@ -142,14 +125,8 @@ def main():
     args = parse_args()
 
     word_set = set()
-    if args.word_file:
-        for word in args.word_file:
-            # Omit proper names.
-            if word[0] in ascii_uppercase:
-                continue
-            word_set.add(word.strip())
-    else:
-        word_set = extract_words_from_zip_file()
+    for word in args.word_file:
+        word_set.add(word.strip())
 
     first_word = args.first_word.lower()
     last_word = args.last_word.lower()
