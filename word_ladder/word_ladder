@@ -1,0 +1,175 @@
+#!/usr/bin/env python3
+
+import argparse
+from argparse import RawTextHelpFormatter
+from string import ascii_lowercase, ascii_uppercase
+import json
+import os.path
+import sys
+import tempfile
+import zipfile
+
+description = """
+Create a word ladder given the first and last steps on the ladder and the
+number of steps in the ladder (not inclusive of the first step).
+
+For example, given the following:
+
+first step: "hawk"
+last step:  "park"
+num steps:  2
+
+A ladder that satisfies these values is:
+
+    "hawk"
+    "hark"
+    "park"
+"""
+
+def word_transformations(word, word_set):
+    """
+    From a given word and a universe of words, return the list of all possible
+    transformed version of word where only a single character in is changed.
+
+    >>> word_transformations('hawk', set(['hark']))
+    ['hark']
+    >>> word_transformations('hawk', set(['hark', 'chance', 'hank', 'hawl']))
+    ['hank', 'hark', 'hawl']
+    >>> word_transformations('hawk', set(['park', 'chance', 'last']))
+    []
+    >>> word_transformations('', set(['hark', 'chance', 'hank']))
+    []
+    >>> word_transformations('hawk', set([]))
+    []
+    """
+    permutations = []
+    for character_index, character in enumerate(word):
+        for possible_new_character in list(ascii_lowercase):
+            if possible_new_character == character:
+                continue
+
+            possible_word = word[0:character_index] + possible_new_character + word[character_index+1:]
+            if possible_word in word_set:
+                permutations.append(possible_word)
+
+    return permutations
+
+
+def make_ladders(first_word, last_word, num_steps, word_set):
+    """
+    Come up with the set of all possible word ladders from first_word to
+    last_word using num_steps with word_set as the universe of all words.
+
+    >>> make_ladders('candy', 'cane', 1, set(['candy', 'cane']))
+    []
+    >>> make_ladders('hawk', 'hark', 1, set(['hark', 'park']))
+    [['hawk', 'hark']]
+    >>> make_ladders('hawk', 'park', 1, set(['hark', 'park']))
+    []
+    >>> make_ladders('hawk', 'park', 2, set(['hark', 'park']))
+    [['hawk', 'hark', 'park']]
+    >>> make_ladders('hawk', 'park', 2, set(['hark', 'pawk', 'park']))
+    [['hawk', 'pawk', 'park'], ['hawk', 'hark', 'park']]
+    """
+    if num_steps <= 0:
+        # This would indicate a program logic error.
+        raise ValueError("num_steps should be greater than or equal to 1.")
+
+    possible_next_words = word_transformations(first_word, word_set)
+
+    # Base case.
+    if num_steps == 1:
+        if last_word in possible_next_words:
+            return [[first_word, last_word]]
+        else:
+            return []
+
+    # Recursion case.
+    ladders = []
+    for possible_next_word in possible_next_words:
+        small_ladders = make_ladders(possible_next_word, last_word, num_steps - 1, word_set)
+        if not small_ladders:
+            # A ladder could not be made with possible_next_word.
+            continue
+
+        for small_ladder in small_ladders:
+            ladders.append([first_word] + small_ladder)
+
+    return ladders
+
+
+def extract_words_from_zip_file():
+    """
+    Extract the words_dictionary.zip file and return a set of the words
+    contained therein.
+    """
+    zip_filename = "words_dictionary.zip"
+
+    with zipfile.ZipFile(zip_filename, 'r') as zip_ref:
+        with tempfile.TemporaryDirectory(prefix="word_ladder") as temp_directory:
+            zip_ref.extractall(temp_directory)
+
+            json_filename = "words_dictionary.json"
+            json_path = os.path.join(temp_directory, json_filename)
+
+            with open(json_path, 'r') as json_fd:
+                data = json.load(json_fd)
+                return set(data.keys())
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(description=description, formatter_class=RawTextHelpFormatter)
+
+    parser.add_argument('first_word', help='The first word in the ladder.')
+    parser.add_argument('last_word', help='The last word in the ladder.')
+    parser.add_argument('num_steps', type=int,
+                        help='The number of steps in the ladder (not including first_word).')
+
+    parser.add_argument('--word-file', metavar='word_file', dest='word_file', type=argparse.FileType('r'),
+                        help='A file name containing the list of words to use. One word per line.')
+
+    args = parser.parse_args()
+
+    if args.num_steps < 1:
+        parser.error("num_steps has to be at least 1.")
+
+    return args
+
+
+def main():
+    args = parse_args()
+
+    word_set = set()
+    if args.word_file:
+        for word in args.word_file:
+            # Omit proper names.
+            if word[0] in ascii_uppercase:
+                continue
+            word_set.add(word.strip())
+    else:
+        word_set = extract_words_from_zip_file()
+
+    first_word = args.first_word.lower()
+    last_word = args.last_word.lower()
+    
+    ladders = make_ladders(first_word, last_word, args.num_steps, word_set)
+
+    is_first = True
+    for index, ladder in enumerate(ladders):
+        if is_first:
+            is_first = False
+        else:
+            # Put a space between ladders.
+            print()
+
+        print(f'Ladder {index}:')
+        for word in ladder:
+            print(f'  {word}')
+
+
+if __name__ == '__main__':
+
+    import doctest
+    doctest.testmod()
+
+    sys.exit(main())
