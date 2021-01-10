@@ -1,6 +1,7 @@
 # word\_ladder
 
 ## Description
+
 Create a word ladder given the first and last steps on the ladder and the
 number of steps in the ladder (not inclusive of the first step).
 
@@ -49,8 +50,7 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   --word-file word_file
-                        A file name containing the list of words to use. One word per line.
-
+                        A file name containing the list of words to use. One word per line. Default: /usr/share/dict/words
 ```
 
 Here's an example invocation with the associated output:
@@ -77,8 +77,6 @@ Ladder 1:
 
 ## Word List
 
-A file with a set of dictionary words to use as the universe of available words
-can be passed in via `--word-file`. If one is not passed in, the included
-`words_dictionary.zip` file is used. For reference, I got this file from here:
-
-https://github.com/dwyl/english-words/blob/11735d0d68f051b817ad224e14d999acc94fcf00/words_dictionary.zip
+A file is read for the word list. A file can be provided via the `--word-file`
+argument. If one is not provided, `/usr/share/dict/words` is used which is
+available on most Linux and MacOS systems.
