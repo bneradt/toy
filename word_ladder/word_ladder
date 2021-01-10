@@ -15,15 +15,15 @@ number of steps in the ladder (not inclusive of the first step).
 
 For example, given the following:
 
-first step: "hawk"
-last step:  "park"
+first step: "tare"
+last step:  "card"
 num steps:  2
 
 A ladder that satisfies these values is:
 
-    "hawk"
-    "hark"
-    "park"
+    "tare"
+    "care"
+    "card"
 """
 
 def word_transformations(word, word_set):
@@ -31,15 +31,15 @@ def word_transformations(word, word_set):
     From a given word and a universe of words, return the list of all possible
     transformed version of word where only a single character in is changed.
 
-    >>> word_transformations('hawk', set(['hark']))
-    ['hark']
-    >>> word_transformations('hawk', set(['hark', 'chance', 'hank', 'hawl']))
-    ['hank', 'hark', 'hawl']
-    >>> word_transformations('hawk', set(['park', 'chance', 'last']))
+    >>> word_transformations('tare', set(['care']))
+    ['care']
+    >>> word_transformations('tare', set(['care', 'chance', 'dare', 'mare']))
+    ['care', 'dare', 'mare']
+    >>> word_transformations('tare', set(['park', 'chance', 'last']))
     []
-    >>> word_transformations('', set(['hark', 'chance', 'hank']))
+    >>> word_transformations('', set(['care', 'chance', 'hank']))
     []
-    >>> word_transformations('hawk', set([]))
+    >>> word_transformations('tare', set([]))
     []
     """
     permutations = []
@@ -62,14 +62,16 @@ def make_ladders(first_word, last_word, num_steps, word_set):
 
     >>> make_ladders('candy', 'cane', 1, set(['candy', 'cane']))
     []
-    >>> make_ladders('hawk', 'hark', 1, set(['hark', 'park']))
-    [['hawk', 'hark']]
-    >>> make_ladders('hawk', 'park', 1, set(['hark', 'park']))
+    >>> make_ladders('tare', 'care', 1, set(['care', 'park']))
+    [['tare', 'care']]
+    >>> make_ladders('tare', 'park', 1, set(['card', 'park']))
     []
-    >>> make_ladders('hawk', 'park', 2, set(['hark', 'park']))
-    [['hawk', 'hark', 'park']]
-    >>> make_ladders('hawk', 'park', 2, set(['hark', 'pawk', 'park']))
-    [['hawk', 'pawk', 'park'], ['hawk', 'hark', 'park']]
+    >>> make_ladders('tare', 'card', 2, set(['care', 'card']))
+    [['tare', 'care', 'card']]
+
+    # "tard" isn't nice, but it is a word that satisfies this test.
+    >>> make_ladders('tare', 'card', 2, set(['card', 'care', 'tard']))
+    [['tare', 'care', 'card'], ['tare', 'tard', 'card']]
     """
     if num_steps <= 0:
         # This would indicate a program logic error.
