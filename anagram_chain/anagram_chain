@@ -1,0 +1,142 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+from string import ascii_lowercase
+
+DEFAULT_WORDS_FILE = "/usr/share/dict/words"
+
+
+class Dictionary(object):
+    """
+    Represent a dictionary of words, with fast, ordered word lookup.
+
+    >>> d = Dictionary()
+    >>> d.add_word("candy")
+    >>> d.add_word("cane")
+    >>> d.add_word("seal")
+    >>> d.add_word("sale")
+    >>> d.lookup("ance")
+    ['cane']
+    >>> d.lookup("alse")
+    ['seal', 'sale']
+    >>> d.lookup("booker")
+    []
+    """
+    def __init__(self):
+        self._dictionary = {}
+
+    @staticmethod
+    def _get_sorted_word(word):
+        return ''.join(sorted(word))
+
+    def add_word(self, word):
+        sorted_word = Dictionary._get_sorted_word(word)
+
+        if sorted_word in self._dictionary:
+            self._dictionary[sorted_word].append(word)
+        else:
+            self._dictionary[sorted_word] = [word]
+
+    def __contains__(self, word):
+        sorted_word = Dictionary._get_sorted_word(word)
+        return sorted_word in self._dictionary
+
+    def lookup(self, word):
+        if word in self:
+            return self._dictionary[Dictionary._get_sorted_word(word)]
+        return []
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('words', nargs='+', help='The words from which to anagram.')
+    parser.add_argument('--word-file', metavar='word_file', dest='word_file',
+                        type=argparse.FileType('r'),
+                        default=DEFAULT_WORDS_FILE,
+                        help='A file name containing the list of words to use. '
+                        'One word per line. Default: ' + DEFAULT_WORDS_FILE)
+
+    args = parser.parse_args()
+
+    word_length = len(args.words[0])
+    for word in args.words:
+        if len(word) != word_length:
+            parser.error("All words should be the same length")
+
+    return args
+
+
+def resolve_puzzle(anagram_list, dictionary, new_letter=None):
+    """
+    >>> d = Dictionary()
+    >>> d.add_word('cane')
+    >>> d.add_word('hale')
+    >>> d.add_word('cand')
+    >>> d.add_word('hald')
+
+    >>> resolve_puzzle(['can', 'hla'], d)
+    [['cand', 'hald'], ['cane', 'hale']]
+    """
+    first_word = anagram_list[0]
+    if new_letter:
+        possible_anagram = first_word + new_letter
+        if possible_anagram not in dictionary:
+            return []
+
+        if len(anagram_list) == 1:
+            # Base case.
+            return [ [word] for word in dictionary.lookup(possible_anagram) ]
+        else:
+            # Recursion case.
+            solutions = []
+            for possible_word in dictionary.lookup(possible_anagram):
+                possible_solutions = resolve_puzzle(anagram_list[1:], dictionary, possible_word[-1])
+                for possible_solution in possible_solutions:
+                    solutions.append([possible_word] + possible_solution)
+            return solutions
+    else:
+        # The letter is not given to us. This is the first anagram in the list.
+        solutions = []
+        for letter in ascii_lowercase:
+            possible_anagram = first_word + letter
+            if possible_anagram not in dictionary:
+                continue
+            if len(anagram_list) == 1:
+                # Base case. I guess they have a puzzle of only one anagram.
+                return [ [word] for word in dictionary.lookup(possible_anagram) ]
+            else:
+                for possible_word in dictionary.lookup(possible_anagram):
+                    possible_solutions = resolve_puzzle(anagram_list[1:], dictionary, possible_word[-1])
+                    for possible_solution in possible_solutions:
+                        if possible_solution[-1][-1] != letter:
+                            continue
+                        solutions.append([possible_word] + possible_solution)
+        return solutions
+
+def main():
+    args = parse_args()
+
+    words_to_anagram = [ word.lower() for word in args.words ]
+    word_length = len(words_to_anagram[0]) + 1
+    dictionary = Dictionary()
+    for possible_dictionary_word in args.word_file:
+        possible_dictionary_word = possible_dictionary_word.strip()
+        if len(possible_dictionary_word) != word_length:
+            continue
+        dictionary.add_word(possible_dictionary_word.lower())
+
+    solutions = resolve_puzzle(words_to_anagram, dictionary)
+    for solution in solutions:
+        words = [ word.upper() for word in solution ]
+        print(' '.join(words))
+        print()
+
+
+if __name__ == '__main__':
+
+    import doctest
+    doctest.testmod()
+
+    sys.exit(main())
