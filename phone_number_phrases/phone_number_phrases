@@ -1,0 +1,276 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+from string import digits as digit_characters
+
+DEFAULT_WORDS_FILE = "/usr/share/dict/words"
+
+
+class Dictionary(object):
+    """
+    Represent a dictionary of words, with fast, ordered word lookup.
+
+    >>> d = Dictionary()
+    >>> d.add_word("candy")
+    >>> d.add_word("cane")
+    >>> d.add_word("seal")
+    >>> d.add_word("sale")
+    >>> d.lookup("ance")
+    ['cane']
+    >>> d.lookup("alse")
+    ['seal', 'sale']
+    >>> "alse" in d
+    True
+    >>> d.lookup("booker")
+    []
+    >>> "booker" in d
+    False
+    """
+    def __init__(self):
+        self._dictionary = {}
+
+    @staticmethod
+    def _get_sorted_word(word):
+        return ''.join(sorted(word))
+
+    def add_word(self, word):
+        sorted_word = Dictionary._get_sorted_word(word)
+
+        if sorted_word in self._dictionary:
+            self._dictionary[sorted_word].append(word)
+        else:
+            self._dictionary[sorted_word] = [word]
+
+    def __contains__(self, word):
+        sorted_word = Dictionary._get_sorted_word(word)
+        return sorted_word in self._dictionary
+
+    def lookup(self, word):
+        if word in self:
+            return self._dictionary[Dictionary._get_sorted_word(word)]
+        return []
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('words', nargs='+', help='The words from which to anagram.')
+    parser.add_argument('--word-file', metavar='word_file', dest='word_file',
+                        type=argparse.FileType('r'),
+                        default=DEFAULT_WORDS_FILE,
+                        help='A file name containing the list of words to use. '
+                        'One word per line. Default: ' + DEFAULT_WORDS_FILE)
+
+    args = parser.parse_args()
+
+    word_length = len(args.words[0])
+    for word in args.words:
+        if len(word) != word_length:
+            parser.error("All words should be the same length")
+
+    return args
+
+
+class PhoneDigit(object):
+    digit_alpha_map = {
+            0: [],
+            1: [],
+            2: ['a', 'b', 'c'],
+            3: ['d', 'e', 'f'],
+            4: ['g', 'h', 'i'],
+            5: ['j', 'k', 'l'],
+            6: ['m', 'n', 'o'],
+            7: ['p', 'q', 'r', 's'],
+            8: ['t', 'u', 'v'],
+            9: ['w', 'x', 'y', 'z'],
+            }
+    def __init__(self, number):
+        if isinstance(number, str):
+            if len(number) != 1:
+                raise ValueError(f'{number} is not a single digit.')
+            if number not in digit_characters:
+                raise ValueError(f'{number} is not a digit.')
+            digit = int(number)
+        elif isinstance(number, int):
+            digit = number
+        else:
+            raise ValueError(f'{number} is not a character or integer')
+
+        if digit < 0 or digit > 9:
+            raise ValueError(f'{digit} should be a digit: [0-9]')
+
+        self._digit = digit
+        self._alpha_list = PhoneDigit.digit_alpha_map[self._digit]
+
+    def has_alpha_values(self):
+        """
+        >>> d = PhoneDigit(2)
+        >>> d.has_alpha_values()
+        True
+        >>> d = PhoneDigit(1)
+        >>> d.has_alpha_values()
+        False
+        """
+        return len(PhoneDigit.digit_alpha_map[self._digit]) > 0
+
+    def get_alpha_values(self):
+        """
+        >>> d = PhoneDigit(2)
+        >>> i = d.get_alpha_values()
+        >>> next(i)
+        'a'
+        >>> next(i)
+        'b'
+        >>> next(i)
+        'c'
+
+        >>> d = PhoneDigit("7")
+        >>> i = d.get_alpha_values()
+        >>> next(i)
+        'p'
+        >>> next(i)
+        'q'
+        >>> next(i)
+        'r'
+        >>> next(i)
+        's'
+        """
+        for alpha in self._alpha_list:
+            yield alpha
+
+
+class PhoneNumber(object):
+    @staticmethod
+    def normalize_number(number):
+        '''
+        Given a number string of various formats, derive just the numbers.
+
+        >>> PhoneNumber.normalize_number('5551234')
+        '5551234'
+        >>> PhoneNumber.normalize_number('555.1234')
+        '5551234'
+        >>> PhoneNumber.normalize_number('555 1234')
+        '5551234'
+        >>> PhoneNumber.normalize_number('555-1234')
+        '5551234'
+        >>> PhoneNumber.normalize_number(' 55 5-1;2.3 4 ')
+        '5551234'
+        '''
+        new_number = ''
+        for letter in number.strip():
+            if letter not in digit_characters:
+                continue
+            new_number += letter
+        return new_number
+
+    def __init__(self, number):
+        self._number = PhoneNumber.normalize_number(number)
+        self._phone_digits = [ PhoneDigit(d) for d in self._number ]
+
+    def length(self):
+        """
+        >>> n = PhoneNumber("555-1234")
+        >>> n.length()
+        7
+        """
+        return len(self._number)
+
+    @staticmethod
+    def _get_anagrams(phone_digits):
+        """
+        >>> phone_digits = [PhoneDigit(2), PhoneDigit(0), PhoneDigit(3)]
+        >>> i = PhoneNumber._get_anagrams(phone_digits)
+        >>> next(i)
+        'ad'
+        >>> next(i)
+        'ae'
+        >>> next(i)
+        'af'
+        >>> next(i)
+        'bd'
+        """
+
+        # Base case.
+        if len(phone_digits) == 1:
+            digit = phone_digits[0]
+            if not digit.has_alpha_values():
+                yield ''
+            else:
+                for alpha in digit.get_alpha_values():
+                    yield alpha
+
+
+        # Recursive case.
+        else:
+            digit = phone_digits[0]
+            if not digit.has_alpha_values():
+                for downstream_anagram in PhoneNumber._get_anagrams(phone_digits[1:]):
+                    yield downstream_anagram
+            else:
+                for alpha in digit.get_alpha_values():
+                    for downstream_anagram in PhoneNumber._get_anagrams(phone_digits[1:]):
+                        yield alpha + downstream_anagram
+
+
+    def get_anagrams(self):
+        for anagram in PhoneNumber._get_anagrams(self._phone_digits):
+            yield anagram
+
+
+class PhoneNumberAction(argparse.Action):
+
+    def __init__(self, option_strings, dest, nargs=None, **kwargs):
+
+        if nargs is not None:
+            raise ValueError("nargs not allowed")
+        super(PhoneNumberAction, self).__init__(option_strings, dest, **kwargs)
+
+    def __call__(self, parser, namespace, phone_number, option_string=None):
+        normalized_number = PhoneNumber.normalize_number(phone_number)
+        if len(normalized_number) != 7:
+            raise ValueError("Phone numbers should be seven digits.")
+        setattr(namespace, self.dest, normalized_number)
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+            description="Find all phrases possible from a phone number.")
+
+    parser.add_argument('phone_number', action=PhoneNumberAction,
+                        help='The phone number from which to find phrases.')
+    parser.add_argument('--word-file', metavar='word_file', dest='word_file',
+                        type=argparse.FileType('r'),
+                        default=DEFAULT_WORDS_FILE,
+                        help='A file name containing the list of words to use. '
+                        'One word per line. Default: ' + DEFAULT_WORDS_FILE)
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+
+    phone_number = PhoneNumber(args.phone_number)
+    word_length = phone_number.length()
+    dictionary = Dictionary()
+    for possible_dictionary_word in args.word_file:
+        possible_dictionary_word = possible_dictionary_word.strip()
+
+        # Some numbers may have digits like 0 which have no letters
+        # thus might be smaller than 7 characters.
+        if len(possible_dictionary_word) > word_length:
+            continue
+        dictionary.add_word(possible_dictionary_word.lower())
+
+    for anagram in phone_number.get_anagrams():
+        if anagram not in dictionary:
+            continue
+        else:
+            print(dictionary.lookup(anagram))
+
+
+if __name__ == '__main__':
+
+    import doctest
+    doctest.testmod()
+
+    sys.exit(main())

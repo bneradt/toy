@@ -20,8 +20,12 @@ class Dictionary(object):
     ['cane']
     >>> d.lookup("alse")
     ['seal', 'sale']
+    >>> "alse" in d
+    True
     >>> d.lookup("booker")
     []
+    >>> "booker" in d
+    False
     """
     def __init__(self):
         self._dictionary = {}
