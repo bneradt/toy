@@ -9,47 +9,69 @@ DEFAULT_WORDS_FILE = "/usr/share/dict/words"
 
 class Dictionary(object):
     """
-    Represent a dictionary of words, with fast, ordered word lookup.
+    Represent a dictionary of words with an ability to break a string into the
+    set of phrases contained therein.
 
     >>> d = Dictionary()
+
+    # Populate the dictionary with add_word().
     >>> d.add_word("candy")
     >>> d.add_word("cane")
+    >>> d.add_word("can")
+    >>> d.add_word("cans")
     >>> d.add_word("seal")
+    >>> d.add_word("ale")
     >>> d.add_word("sale")
-    >>> d.lookup("ance")
-    ['cane']
-    >>> d.lookup("alse")
-    ['seal', 'sale']
-    >>> "alse" in d
+
+    # Individual words can be tested for existence in the dictionary via 'in'.
+    >>> "can" in d
     True
-    >>> d.lookup("booker")
-    []
     >>> "booker" in d
     False
+
+    # Generate phrases from a string via get_phrases.
+    >>> d.get_phrases("cansale")
+    ['can sale', 'cans ale']
+    >>> d.get_phrases("canseal")
+    ['can seal']
+
+    # Phrases are only acceptible if they use every letter in the given string.
+    # In the following example, since "sales" is not in the dictionary, nor
+    # 's', no phrase can be created.
+    >>> d.get_phrases("cansales")
+    []
+
+    >>> d.get_phrases("alse")
+    []
+    >>> d.get_phrases("can")
+    ['can']
+
     """
     def __init__(self):
-        self._dictionary = {}
-
-    @staticmethod
-    def _get_sorted_word(word):
-        return ''.join(sorted(word))
+        self._dictionary = set()
 
     def add_word(self, word):
-        sorted_word = Dictionary._get_sorted_word(word)
-
-        if sorted_word in self._dictionary:
-            self._dictionary[sorted_word].append(word)
-        else:
-            self._dictionary[sorted_word] = [word]
+        self._dictionary.add(word.lower())
 
     def __contains__(self, word):
-        sorted_word = Dictionary._get_sorted_word(word)
-        return sorted_word in self._dictionary
+        return word.lower() in self._dictionary
 
-    def lookup(self, word):
-        if word in self:
-            return self._dictionary[Dictionary._get_sorted_word(word)]
-        return []
+    def get_phrases(self, letters):
+        first_word = ''
+
+        phrases = []
+        for index in range(1, len(letters) + 1):
+            word = letters[:index]
+            if word not in self:
+                continue
+            if word == letters:
+                phrases.append(word)
+            else:
+                downstream_phrases = self.get_phrases(letters[index:])
+                if not downstream_phrases:
+                    continue
+                phrases += [ f'{word} {phrase}' for phrase in downstream_phrases ]
+        return phrases
 
 
 def parse_args():
@@ -177,10 +199,10 @@ class PhoneNumber(object):
         return len(self._number)
 
     @staticmethod
-    def _get_anagrams(phone_digits):
+    def _get_ascii_strings(phone_digits):
         """
         >>> phone_digits = [PhoneDigit(2), PhoneDigit(0), PhoneDigit(3)]
-        >>> i = PhoneNumber._get_anagrams(phone_digits)
+        >>> i = PhoneNumber._get_ascii_strings(phone_digits)
         >>> next(i)
         'ad'
         >>> next(i)
@@ -205,16 +227,19 @@ class PhoneNumber(object):
         else:
             digit = phone_digits[0]
             if not digit.has_alpha_values():
-                for downstream_anagram in PhoneNumber._get_anagrams(phone_digits[1:]):
+                for downstream_anagram in PhoneNumber._get_ascii_strings(phone_digits[1:]):
                     yield downstream_anagram
             else:
                 for alpha in digit.get_alpha_values():
-                    for downstream_anagram in PhoneNumber._get_anagrams(phone_digits[1:]):
+                    for downstream_anagram in PhoneNumber._get_ascii_strings(phone_digits[1:]):
                         yield alpha + downstream_anagram
 
 
-    def get_anagrams(self):
-        for anagram in PhoneNumber._get_anagrams(self._phone_digits):
+    def get_ascii_strings(self):
+        """
+        Generate every possible letter combination from the phone number.
+        """
+        for anagram in PhoneNumber._get_ascii_strings(self._phone_digits):
             yield anagram
 
 
@@ -255,17 +280,24 @@ def main():
     for possible_dictionary_word in args.word_file:
         possible_dictionary_word = possible_dictionary_word.strip()
 
-        # Some numbers may have digits like 0 which have no letters
-        # thus might be smaller than 7 characters.
+        # A phrase of 7 characters cannot have words in it greater than 7
+        # characters.
         if len(possible_dictionary_word) > word_length:
+            continue
+
+        # The dictionary contains all the individual letters as words. Only
+        # allow these for 'a' and 'I'.
+        if len(possible_dictionary_word) == 1 and possible_dictionary_word not in ('a', 'i'):
             continue
         dictionary.add_word(possible_dictionary_word.lower())
 
-    for anagram in phone_number.get_anagrams():
-        if anagram not in dictionary:
-            continue
-        else:
-            print(dictionary.lookup(anagram))
+    phrases = []
+    for ascii_string in phone_number.get_ascii_strings():
+        phrases += dictionary.get_phrases(ascii_string)
+
+    for phrase in phrases:
+        print(phrase)
+
 
 
 if __name__ == '__main__':
