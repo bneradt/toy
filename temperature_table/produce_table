@@ -1,0 +1,74 @@
+#!/usr/bin/env python
+
+import argparse
+import sys
+
+def parse_args():
+    parser = argparse.ArgumentParser(description='Create a Farhenheit and Celsius table.')
+    parser.add_argument('start_temp', type=int,
+                        help='The starting temperature of the table.')
+    parser.add_argument('end_temp', type=int,
+                        help='The ending temperature of the table.')
+    parser.add_argument('input_units', choices=['c', 'C', 'Celsius', 'f', 'F', 'Farhenheit'],
+                        default='F',
+                        help='The input ("start_temp" and "end_temp") temperature units.')
+    parser.add_argument('step', type=int, default=5,
+                        help="The table's increment between each row.")
+
+    return parser.parse_args()
+
+
+def celsius_to_farhenheit(celsius):
+    """
+    >>> celsius_to_farhenheit(0)
+    32
+    >>> celsius_to_farhenheit(100)
+    212
+    >>> celsius_to_farhenheit(-12)
+    10
+    """
+    return int(round((9.0 / 5.0) * celsius + 32.0))
+
+
+def fahrenheit_to_celsius(farhenheit):
+    """
+    >>> fahrenheit_to_celsius(32)
+    0
+    >>> fahrenheit_to_celsius(212)
+    100
+    >>> fahrenheit_to_celsius(0)
+    -18
+    """
+    return int(round((5.0 / 9.0) * (farhenheit - 32.0)))
+
+
+def row_generator(start, stop, step, conversion_function):
+    """
+    >>> g = row_generator(0, 100, 100, celsius_to_farhenheit)
+    >>> next(g)
+    (0, 32)
+    >>> next(g)
+    (100, 212)
+    """
+    end = stop + step
+    for t in range(start, end, step):
+        yield (t, conversion_function(t))
+
+def main():
+    args = parse_args()
+    conversion_function = fahrenheit_to_celsius
+    in_temp, out_temp = 'Farhenheit', 'Celsius'
+    if args.input_units.lower() in ['c', 'celsius']:
+        conversion_function = celsius_to_farhenheit
+        in_temp, out_temp = 'Celsius', 'Farhenheit'
+
+    print(f'{in_temp:^15} | {out_temp:^15}')
+    pad_char = '-'
+    print(f'{pad_char:-^15} | {pad_char:-^15}')
+    for in_row, out_row in row_generator(args.start_temp, args.end_temp, args.step, conversion_function):
+        print(f'{in_row:^15} | {out_row:^15}')
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+    sys.exit(main())
