@@ -69,7 +69,8 @@ def get_first_basement_position(description):
             return position
 
         position += 1
-    return floor
+    # He never wound up in the basement. Return 0.
+    return 0
 
 
 def parse_args():

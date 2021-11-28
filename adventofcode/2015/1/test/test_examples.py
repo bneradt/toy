@@ -22,6 +22,8 @@ class TestExamples(unittest.TestCase):
         self.assertEqual(-3, description_to_final_floor(')())())'))
 
     def test_get_first_basement_position(self):
+        self.assertEqual(0, get_first_basement_position('()()('))
+
         self.assertEqual(1, get_first_basement_position(')'))
         self.assertEqual(1, get_first_basement_position(')))'))
 
