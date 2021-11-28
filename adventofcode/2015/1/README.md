@@ -1,3 +1,8 @@
+# Description
+
+This computes solutions for the following Advent of Code puzzle:
+https://adventofcode.com/2015/day/1
+
 # Usage
 
 Provide the floor description to get the final floor Santa winds up at:
