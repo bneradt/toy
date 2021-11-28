@@ -1,0 +1,39 @@
+#!/usr/bin/env python3
+
+import argparse
+import random
+import sys
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument('num_tosses', metavar='num_tosses', type=int,
+                        help='The number of times to toss the coin.')
+
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    num_tosses = args.num_tosses
+
+    num_heads = 0
+    num_tails = 0
+    for i in range(num_tosses):
+        toss = random.randint(0,1)
+        if toss == 0:
+            num_heads += 1
+        elif toss == 1:
+            num_tails += 1
+        else:
+            raise ValueError("Unexpected coin toss result.")
+
+    print(f"heads: {num_heads}")
+    print(f"tails: {num_tails}")
+    print(f"diff : {num_heads - num_tails}")
+
+    percent_off = 100 * float(num_heads - num_tails)/float(num_heads)
+    print(f"percent difference: {percent_off}")
+
+if __name__ == '__main__':
+    sys.exit(main())

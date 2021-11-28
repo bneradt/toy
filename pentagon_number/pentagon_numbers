@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+
+import sys
+
+"""
+       b
+    8     c
+  a         1
+   h      d
+    g  f e
+"""
+
+found_a_solution = False
+
+# 1 is already taken, so a cannot be that.
+# Also b cannot be 1, so it must be at least 2.
+# 14 - 8 - 2 = 4. Try values from 2 through 4.
+# Range is non-inclusive of the last value.
+for a in range(2, 5):
+    used_values = set([1, 8, a])
+    b = 14 - 8 - a
+    if b > 10 or b in used_values:
+        continue
+    used_values.add(b)
+    c = 14 - b - 1
+    if c > 10 or c in used_values:
+        continue
+
+    for d in range(2, 11):
+        used_values = set([1, 8, a, b, c])
+        if d > 10 or d in used_values:
+            continue
+        used_values.add(d)
+        e = 14 - d - 1
+        if e > 10 or e in used_values:
+            continue
+
+        for f in range(2, 11):
+            used_values = set([1, 8, a, b, c, d, e])
+            if f > 10 or f in used_values:
+                continue
+            used_values.add(f)
+
+            g = 14 - f - e
+            if g > 10 or g in used_values:
+                continue
+            used_values.add(g)
+            h = 14 - a - g
+            if h > 10 or h in used_values:
+                continue
+            else:
+                print(f'''
+        {b}
+    8       {c}
+{a}              1
+  {h}          {d}
+     {g}  {f}  {e}
+''')
+                found_a_solution = True
+
+if not found_a_solution:
+    print("Could find no value.")
+    sys.exit(1)

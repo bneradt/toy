@@ -1,0 +1,118 @@
+#!/usr/bin/env python3
+
+import sys
+
+WORDS_FILE = "/usr/share/dict/words"
+LETTERS = ['a', 'd', 'e', 'l', 'd', 'd', 'i', 'o']
+
+def spellable_with(letters, word):
+    """
+    Determine whether word can be spelled with letters.
+
+    >>> spellable_with(['b', 'e', 'e'], "bee")
+    True
+    >>> spellable_with(['b', 'e', 'e'], "bea")
+    False
+    >>> spellable_with(['b', 'e', 'e', 'a'], "bea")
+    True
+    >>> spellable_with(['b', 'e', 'e', 'a'], "abe")
+    True
+    >>> spellable_with(['b', 'e', 'e'], "be")
+    True
+    >>> spellable_with(['e', 'b', 'e'], "bee")
+    True
+    """
+    letters = letters.copy()
+    if len(word) > len(letters):
+        return False
+
+    for letter_from_word in word:
+        if letter_from_word not in letters:
+            return False
+        letters.remove(letter_from_word)
+
+    return True
+
+
+def get_words():
+    word_set = set()
+    available_letters = LETTERS.copy()
+    # 'l' is given in the grid.
+    available_letters.append('l')
+    for word in open(WORDS_FILE, 'r'):
+        word = word.strip()
+        if len(word) != 3:
+            continue
+
+        if not spellable_with(available_letters, word):
+            continue
+        word_set.add(word)
+
+    return word_set
+
+def main():
+    words = get_words()
+
+    """
+    abc
+    def
+    ghi
+    """
+    for a in set(LETTERS):
+        a_letters = LETTERS.copy()
+        a_letters.remove(a)
+        for b in set(a_letters):
+            b_letters = a_letters.copy()
+            b_letters.remove(b)
+            for c in set(b_letters):
+                c_letters = b_letters.copy()
+                c_letters.remove(c)
+                if (a + b + c) not in words:
+                    continue
+                for d in set(c_letters):
+                    d_letters = c_letters.copy()
+                    d_letters.remove(d)
+                    for e in set(d_letters):
+                        e_letters = d_letters.copy()
+                        e_letters.remove(e)
+                        for f in set(e_letters):
+                            f_letters = e_letters.copy()
+                            f_letters.remove(f)
+                            if (d + e + f) not in words:
+                                continue
+
+                            # g is given to us
+                            g = 'l'
+                            if (a + d + g) not in words:
+                                continue
+                            for h in set(f_letters):
+                                h_letters = f_letters.copy()
+                                h_letters.remove(h)
+
+                                if (b + e + h) not in words:
+                                    continue
+
+                                assert(len(h_letters) == 1)
+                                i = h_letters[0]
+
+                                if (c + f + i) not in words:
+                                    continue
+
+                                if (a + e + i) not in words:
+                                    continue
+
+                                if (c + e + g) not in words:
+                                    continue
+
+                                print(f"""
+{a}{b}{c}
+{d}{e}{f}
+{g}{h}{i}
+""")
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+
+    sys.exit(main())
