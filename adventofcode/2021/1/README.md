@@ -16,7 +16,15 @@ positional arguments:
 optional arguments:
   -h, --help            show this help message and exit
   -w WINDOW_SIZE, --window_size WINDOW_SIZE
-                        Using a sliding window of the given size to count depth increases.
+                        Using a sliding window of the given size to count depth increases. Default: 1
+```
+
+For example, to calculate the number of depth increases with a window size of 3
+and an input file of `input.txt`:
+
+```
+$ ./process_depth/process_depth.py -w3 input.txt 
+1734
 ```
 
 # Tests
