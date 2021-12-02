@@ -21,7 +21,7 @@ optional arguments:
 
 # Tests
 
-The unit tests for this can be run like so:
+The unit tests for this can be run with the unittest module:
 
 ```
 $ python3 -m unittest
@@ -30,4 +30,11 @@ $ python3 -m unittest
 Ran 5 tests in 0.003s
 
 OK
+```
+
+The end to end tests can be run with the `tests/end_to_end.sh` script:
+
+```
+$ bash test/end_to_end.sh
+All tests pass.
 ```

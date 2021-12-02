@@ -16,7 +16,7 @@ def parse_args():
             type=int,
             default=1,
             help="Using a sliding window of the given size "
-                "to count depth increases.")
+                "to count depth increases. Default: 1")
 
     return parser.parse_args()
 
