@@ -20,7 +20,7 @@ def parse_args():
 
     return parser.parse_args()
 
-def count_increases(window_size, numbers):
+def count_increases(numbers, window_size=1):
     """
     Count how many times a sliding window of @a window_size increases in @a
     numbers.
@@ -32,7 +32,7 @@ def count_increases(window_size, numbers):
     Returns (int): The number of times a sliding window of three integers
     increases in @a numbers.
 
-    >>> count_increases(1, [1, 10, 2, 2, 3, 1])
+    >>> count_increases([1, 10, 2, 2, 3, 1])
     2
     """
     window = []
@@ -64,7 +64,7 @@ def IntFileIterator(file):
 def main():
     args = parse_args()
     depth_iterator = IntFileIterator(args.depth_report_file)
-    depth_increase_count = count_increases(args.window_size, depth_iterator)
+    depth_increase_count = count_increases(depth_iterator, args.window_size)
     print(depth_increase_count)
 
 if __name__ == '__main__':

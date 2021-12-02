@@ -6,19 +6,19 @@ import unittest
 
 class TestCountIncreasesWindowSize1(unittest.TestCase):
     """
-    Test count_increases with a window size of 1.
+    Test count_increases with a window size of 1 (the default).
     """
     def test_all_increases(self):
         l = [-20, 1, 2, 10, 100, 103]
-        self.assertEqual(len(l) - 1, count_increases(1, l))
+        self.assertEqual(len(l) - 1, count_increases(l))
 
     def test_all_decreases(self):
         l = [120, 8, 5, 0, -1]
-        self.assertEqual(0, count_increases(1, l))
+        self.assertEqual(0, count_increases(l))
 
     def test_mix(self):
         l = [-30, -40, -20, -5, 0, 3, 2, -1, 5, 8, 7, 8, 8, 6]
-        self.assertEqual(7, count_increases(1, l))
+        self.assertEqual(7, count_increases(l))
 
 class TestCountWindowIncreases(unittest.TestCase):
     """
@@ -26,7 +26,7 @@ class TestCountWindowIncreases(unittest.TestCase):
     """
     def test_with_sample_input(self):
         l = [199, 200, 208, 210, 200, 207, 240, 269, 260, 263]
-        self.assertEqual(5, count_increases(3, l))
+        self.assertEqual(5, count_increases(l, 3))
 
 class TestIntFileIterator(unittest.TestCase):
     """
