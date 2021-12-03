@@ -100,7 +100,7 @@ class Submarine:
         if len(split_line) != 2:
             raise ValueError(f'Poorly formatted instuction: "{instruction}"')
 
-        direction, magnitude = instruction.split()
+        direction, magnitude = split_line
         try:
             magnitude = int(magnitude)
         except ValueError:
@@ -186,7 +186,7 @@ class Submarine:
         if len(split_line) != 2:
             raise ValueError(f'Poorly formatted instuction: "{instruction}"')
 
-        direction, magnitude = instruction.split()
+        direction, magnitude = split_line
         try:
             magnitude = int(magnitude)
         except ValueError:
