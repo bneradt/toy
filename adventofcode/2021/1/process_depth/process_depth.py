@@ -44,9 +44,11 @@ def count_increases(numbers, window_size=1):
             raise RuntimeError("Logic error: window exceeded the expected size.")
 
         if len(window) == window_size:
-            previous_window_sum = sum(window)
-            this_window_sum = sum(window[1:]) + number
-            if this_window_sum > previous_window_sum:
+            # Since values after the first in the previous window and before
+            # the last in the current window are the same, they need not be
+            # accounted for. Only the first entry in the previous window needs
+            # to be compared with the last in the current.
+            if number > window[0]:
                 increase_count += 1
             window = window[1:]
         window.append(number)
