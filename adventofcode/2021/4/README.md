@@ -1,14 +1,22 @@
 # Description
 
-This solves the Advent of Code [2021 day 4](https://adventofcode.com/2021/day/4) puzzle (just part 1 so far).
+This solves the Advent of Code [2021 day 4](https://adventofcode.com/2021/day/4) puzzle.
 
 # Usage
 
 ```
-$ ./bingo/bingo.py 
-usage: bingo.py [-h] input
-bingo.py: error: the following arguments are required: input
+$ ./bingo/bingo.py -h
+usage: bingo.py [-h] [-l] input
 
+Process called Bingo numbers to find a winning board.
+
+positional arguments:
+  input                 The called number and Bingo board input.
+
+  optional arguments:
+    -h, --help            show this help message and exit
+      -l, --find_last_winner
+                              Find the score of the last winning board. By default the score of the first winning board is printed.
 ```
 
 For example, to get the winning board score from input.txt:

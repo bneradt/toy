@@ -173,6 +173,14 @@ def parse_args() -> argparse.ArgumentParser:
             type=argparse.FileType('rt'),
             default=sys.stdin,
             help='The called number and Bingo board input.')
+
+    parser.add_argument(
+            '-l', '--find_last_winner',
+            action='store_true',
+            default=False,
+            help='Find the score of the last winning board. By '
+                 'default the score of the first winning board '
+                 'is printed.')
     return parser.parse_args()
 
 
@@ -200,11 +208,21 @@ def main():
     if rows:
         boards.append(Board(rows))
 
+    # Now call the numbers.
+    last_winning_score: int = None
     for number in called_numbers:
         for board in boards:
+            if board.is_winning():
+                continue
             if board.mark_number(number):
-                print(board.get_board_score())
-                return 0
+                last_winning_score = board.get_board_score()
+                if not args.find_last_winner:
+                    print(last_winning_score)
+                    return 0
+
+    if last_winning_score is not None:
+        print(last_winning_score)
+        return 0
 
     # No winning board was found.
     return 1
