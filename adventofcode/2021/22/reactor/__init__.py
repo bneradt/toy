@@ -1,1 +1,1 @@
-from .reactor import Cube, Reactor
+from .reactor import Reactor

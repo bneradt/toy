@@ -1,175 +1,96 @@
 #!/usr/bin/env python3
 
 import sys
-from typing import Any, List
+from typing import Any, List, Dict, Set
 import argparse
 
-class Cube:
-    ON: bool = True
-    OFF: bool = False
-
-    def __init__(self):
-        self._state = Cube.OFF
-
-    def __str__(self) -> str:
-        return self.__repr__()
-
-    def __repr__(self) -> str:
-        return f'Cube({self._state})'
-
-    def is_on(self) -> bool:
-        """
-        Return whether the reactor is on.
-
-        Return (bool): True if the reactor is on, False otherwise.
-
-        >>> c = Cube()
-        >>> c.is_on()
-        False
-        >>> c.turn_on()
-        True
-        >>> c.is_on()
-        True
-        """
-        return self._state == Cube.ON
-
-    def is_off(self) -> bool:
-        """
-        Return whether the reactor is off.
-
-        Return (bool): True if the reactor is off, False otherwise.
-
-        >>> c = Cube()
-        >>> c.is_off()
-        True
-        >>> c.turn_on()
-        True
-        >>> c.is_off()
-        False
-        """
-        return self._state == Cube.OFF
-
-    def turn_on(self) -> bool:
-        """
-        Turn the cube on.
-
-        Returns (bool): True if the cube was off and now it is on. Return
-        False if it was already on.
-
-        >>> c = Cube()
-        >>> c.turn_on()
-        True
-        >>> c.turn_on()
-        False
-        """
-        if self._state == Cube.OFF:
-            self._state = Cube.ON
-            return True
-        else:
-            return False
-
-    def turn_off(self) -> bool:
-        """
-        Turn the cube off.
-
-        Returns (bool): True if the cube was on and now it is off. Return
-        False if it was already off.
-
-        >>> c = Cube()
-        >>> c.turn_off()
-        False
-        >>> c.turn_on()
-        True
-        >>> c.turn_off()
-        True
-        """
-        if self._state == Cube.ON:
-            self._state = Cube.OFF
-            return True
-        else:
-            return False
 
 class Reactor:
+    """
+    Manages the set of all ActiveCube objects.
+    """
+    _active_cubes: Dict[int, Dict[int, Dict[int, bool]]]
+    _on_count: int
+    _min_valid: int
+    _max_valid: int
+    CUBE_ON = True
+    CUBE_OFF = False
 
-    def __init__(self, side_size: int = 101):
+    def __init__(self, side_size: int = 0):
         """
         Initialize a reactor cube, with side_size cubes on a side.
 
         Arguments:
-            side_size (int): The number of reactors on a side.
+            side_size (int): The number of reactors on a side. If the size
+            is 0, then the reactor is unbounded in size.
         """
-        if side_size % 2 == 0:
-            raise ValueError(f"side_size should be odd. Was: {side_size}")
+        if side_size != 0 and side_size % 2 == 0:
+            raise ValueError(f'side_size must be 0 or an odd value. Got {side_size}.')
+        self._active_cubes = {}
+        self._on_count = 0
+        self._side_size = side_size
+        self._min_valid = -1 * int(side_size / 2)
+        self._max_valid = int(side_size / 2)
 
-        self._cubes: List[List[List[Cube]]] = []
-        for x in range(side_size):
-            self._cubes.append([])
-            for y in range(side_size):
-                self._cubes[x].append([])
-                for z in range(side_size):
-                    self._cubes[x][y].append(Cube())
-
-    def off_count(self) -> int:
-        """
-        The number of cubes that are off.
-
-        >>> r = Reactor(3)
-        >>> r.off_count()
-        27
-        """
-        count = 0
-        for x in self._cubes:
-            for y in x:
-                for cube in y:
-                    if cube.is_off():
-                        count += 1
-        return count
 
     def on_count(self) -> int:
         """
-        The number of cubes that are off.
+        The number of cubes that are on.
 
-        >>> r = Reactor(3)
+        >>> r = Reactor()
         >>> r.on_count()
         0
         >>> r.process_step('on x=-1..1,y=0..0,z=1..1')
         3
+        >>> r.on_count()
+        3
+        >>> r.process_step('on x=-1..1,y=0..0,z=1..1')
+        0
+        >>> r.on_count()
+        3
         """
-        count = 0
-        for x in self._cubes:
-            for y in x:
-                for cube in y:
-                    if cube.is_on():
-                        count += 1
-        return count
+        return self._on_count
 
 
     def _parse_step(self, step_description: str) -> List[Any]:
         """
-        Parse the step into the command and its ranges.
+        Parse the step into the command and its useful ranges.
+
+        The first index indicates whether the given range is outside the
+        reactor size and therefore should be skipped.
 
         >>> r = Reactor(3)
         >>> r._parse_step('on x=-1..-1,y=0..0,z=1..1')
-        [True, 0, 1, 1, 2, 2, 3]
+        [False, True, -1, 0, 0, 1, 1, 2]
+
+        >>> r = Reactor(3)
+        >>> r._parse_step('on x=-4..-1,y=0..0,z=1..1')
+        [True, True, -4, 0, 0, 1, 1, 2]
         """
         ret: List[Any] = []
         command, ranges_str = step_description.split()
         if command.lower()  == 'on':
-            ret.append(Cube.ON)
+            ret.append(Reactor.CUBE_ON)
         if command.lower()  == 'off':
-            ret.append(Cube.OFF)
+            ret.append(Reactor.CUBE_OFF)
         ranges = ranges_str.split(',')
 
-        offset = int(len(self._cubes) / 2)
+        should_skip = False
         for r in ranges:
             axis, r = r.split('=')
             begin_str, end_str = r.split('..')
 
-            begin = int(begin_str) + offset
+            begin = int(begin_str)
+            if self._min_valid != 0 and begin < self._min_valid:
+                should_skip = True
             ret.append(begin)
 
-            end = int(end_str) + offset + 1
+            end = int(end_str) + 1
+            if self._max_valid != 0 and end - 1 > self._max_valid:
+                should_skip = True
             ret.append(end)
+
+        ret.insert(0, should_skip)
         return ret
 
 
@@ -189,25 +110,40 @@ class Reactor:
         1
         >>> r.on_count()
         1
+
+        # Outside the range.
         >>> r.process_step('on x=5..10,y=0..0,z=1..1')
         0
         """
-        command, xbegin, xend, ybegin, yend, zbegin, zend = \
+        should_skip, command, xbegin, xend, ybegin, yend, zbegin, zend = \
                 self._parse_step(step_description)
 
         count = 0
-        try:
-            for x in self._cubes[xbegin:xend]:
-                for y in x[ybegin:yend]:
-                    for cube in y[zbegin:zend]:
-                        if command == Cube.ON:
-                            if cube.turn_on():
-                                count += 1
-                        else:
-                            if cube.turn_off():
-                                count -= 1
-        except IndexError:
-            return 0
+        if should_skip:
+            return count
+
+        if command == Reactor.CUBE_ON:
+            for x in range(xbegin, xend):
+                if x not in self._active_cubes:
+                    self._active_cubes[x] = {}
+                for y in range(ybegin, yend):
+                    if y not in self._active_cubes[x]:
+                        self._active_cubes[x][y] = {}
+                    for z in range(zbegin, zend):
+                        if z not in self._active_cubes[x][y]:
+                            self._active_cubes[x][y][z] = True
+                            count += 1
+        else:
+            # Disabling cubes.
+            for x in range(xbegin, xend):
+                for y in range(ybegin, yend):
+                    for z in range(zbegin, zend):
+                        try:
+                            del self._active_cubes[x][y][z]
+                            count -= 1
+                        except KeyError:
+                            continue
+        self._on_count += count
         return count
 
     def process_steps(self, reboot_steps: tuple) -> int:
@@ -231,6 +167,11 @@ def parse_args():
     parser = argparse.ArgumentParser(
             description='Manage a reactor and rebooting it.')
     parser.add_argument(
+            '-s', '--side_size',
+            type=int,
+            default=0,
+            help='The number of cubes on a side of the reactor. 0 means unlimited.')
+    parser.add_argument(
             'reboot_steps_file',
             type=argparse.FileType('rt'),
             default=sys.stdin,
@@ -241,7 +182,7 @@ def parse_args():
 def main():
     args = parse_args()
 
-    r = Reactor()
+    r = Reactor(args.side_size)
     count = r.process_steps(args.reboot_steps_file)
     print(count)
 
