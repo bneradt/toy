@@ -4,7 +4,7 @@
 
 import argparse
 import sys
-from typing import Dict, List
+from typing import List
 
 
 class LanternFishSchool:
@@ -15,7 +15,7 @@ class LanternFishSchool:
 
     """
 
-    _school: Dict[int, int]
+    _school: List[int]
 
     def __init__(self, initial_school: List[int]):
         """Initialize the school.
@@ -26,12 +26,9 @@ class LanternFishSchool:
             The set of initial timer values for the school of fish.
 
         """
-        self._school = {}
-        for initial_timer_value in initial_school:
-            try:
-                self._school[initial_timer_value] += 1
-            except KeyError:
-                self._school[initial_timer_value] = 1
+        self._school = [0 for _ in range(9)]
+        for initial_value in initial_school:
+            self._school[initial_value] += 1
 
     def get_school_size(self) -> int:
         """Retrieve the number of fish in the school.
@@ -46,7 +43,7 @@ class LanternFishSchool:
         3
 
         """
-        return sum(self._school.values())
+        return sum(self._school)
 
     def advance_one_day(self) -> int:
         """Advance each fish in the school by one day.
@@ -64,24 +61,9 @@ class LanternFishSchool:
         4
 
         """
-        new_school: Dict[int, int] = {}
-        num_to_spawn = 0
-        if 0 in self._school and self._school[0]:
-            num_to_spawn = self._school[0]
-        for timer_value, count in self._school.items():
-            if timer_value == 0:
-                # Handled below as a special case of spawning.
-                continue
-            new_school[timer_value-1] = count
-
-        if num_to_spawn:
-            new_school[8] = num_to_spawn
-            try:
-                new_school[6] += num_to_spawn
-            except KeyError:
-                new_school[6] = num_to_spawn
-
-        self._school = new_school
+        num_to_spawn = self._school.pop(0)
+        self._school.append(num_to_spawn)
+        self._school[6] += num_to_spawn
         return self.get_school_size()
 
 
