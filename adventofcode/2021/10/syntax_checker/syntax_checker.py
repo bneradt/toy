@@ -27,6 +27,13 @@ class LineChecker:
         '>': 25137
     }
 
+    _autocomplete_character_score = {
+        ')': 1,
+        ']': 2,
+        '}': 3,
+        '>': 4
+    }
+
     def __init__(self, line: str):
         """Initialize the checker with the given line.
 
@@ -160,33 +167,68 @@ class LineChecker:
         """
         return self._first_illegal_character
 
-    def get_syntax_error_score(self) -> int:
+    def get_autocomplete_score(self) -> int:
+        """Find the autocomplete score for the line.
+
+        If the line is incomplete (i.e., missing closing characters), this will
+        calculate the score for appending the characters that will complete the
+        line.
+
+        :examples:
+            >>> l = LineChecker('{()}')
+            >>> l.get_autocomplete_score()
+            0
+
+            >>> l = LineChecker('{([(<{}[<>[]}>{[]{[(<()>')
+            >>> l.get_autocomplete_score()
+            0
+
+            # An incomplete line.
+            >>> l = LineChecker('[({(<(())[]>[[{[]{<()<>>')
+            >>> l.get_autocomplete_score()
+            288957
+
+        """
+        if self.is_corrupted() or not self._unclosed_characters:
+            return 0
+        reversed_unclosed = self._unclosed_characters
+        reversed_unclosed.reverse()
+
+        score = 0
+        for character in reversed_unclosed:
+            closing_character = LineChecker._pairs[character]
+            score *= 5
+            score += LineChecker._autocomplete_character_score[
+                closing_character]
+        return score
+
+    def get_corruption_score(self) -> int:
         """Find the syntax score for any errors in the line.
 
         :examples:
             >>> l = LineChecker('{()}')
-            >>> l.get_syntax_error_score()
+            >>> l.get_corruption_score()
             0
 
             >>> l = LineChecker('{([(<{}[<>[]}>{[]{[(<()>')
-            >>> l.get_syntax_error_score()
+            >>> l.get_corruption_score()
             1197
 
             >>> l = LineChecker('[<[([]))<([[{}[[()]]]')
-            >>> l.get_syntax_error_score()
+            >>> l.get_corruption_score()
             3
 
             >>> l = LineChecker('[{[{({}]{}}([{[{{{}}([]')
-            >>> l.get_syntax_error_score()
+            >>> l.get_corruption_score()
             57
 
             >>> l = LineChecker('<{([([[(<>()){}]>(<<{{')
-            >>> l.get_syntax_error_score()
+            >>> l.get_corruption_score()
             25137
 
             # An incomplete line.
             >>> l = LineChecker('[({(<(())[]>[[{[]{<()<>>')
-            >>> l.get_syntax_error_score()
+            >>> l.get_corruption_score()
             0
 
         """
@@ -201,17 +243,34 @@ def parse_args():
         type=argparse.FileType('rt'),
         default=sys.stdin,
         help='The file containing the navigation commands.')
+    parser.add_argument(
+        '-a', '--autocomplete',
+        action='store_true',
+        help='Calculate the autocomplete score. By default the syntax error '
+             'score is completed.')
     return parser.parse_args()
 
 
 def main():
     """Begin the script's logic."""
     args = parse_args()
-    syntax_error_score = 0
+    scores: List[int] = []
     for line in args.input_file:
         line_checker = LineChecker(line)
-        syntax_error_score += line_checker.get_syntax_error_score()
-    print(syntax_error_score)
+        if args.autocomplete:
+            autocomplete_score = line_checker.get_autocomplete_score()
+            if autocomplete_score == 0:
+                continue
+            scores.append(autocomplete_score)
+        else:
+            scores.append(line_checker.get_corruption_score())
+    if args.autocomplete:
+        scores.sort()
+        num_scores = len(scores)
+        middle_index = int(num_scores / 2)
+        print(scores[middle_index])
+    else:
+        print(sum(scores))
     return 0
 
 
