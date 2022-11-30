@@ -1,20 +1,24 @@
+#if TIMING
 #include <chrono>
-#include <fstream>
+#endif
 #include <iostream>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <vector>
 
+#if TEST
+#include <assert.h>
+#endif
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/uio.h>
 #include <unistd.h>
 
 std::string_view DEFAULT_DICTIONARY_FILE = "en-filtered.wl";
-std::string_view WORD_TO_ANALYZE = "thanksgiving";
+// The word "thanksgiving", but sorted.
+std::string_view WORD_TO_ANALYZE = "agghiiknnstv";
 
-// Parse a dictionary file into an unordered set of words.
+// Parse a dictionary file into a vector of words.
 std::vector<std::string>
 parse_dictionary(std::string_view filename)
 {
@@ -68,17 +72,23 @@ parse_dictionary(std::string_view filename)
 
 // Determine whether the given word is in word_to_analyze.
 bool
-find(std::string_view needle, std::string_view haystack)
+word_is_in(std::string_view needle, std::string_view haystack)
 {
-  std::vector<char const*> used_characters;
-  for (char const *finding = needle.data(); *finding; ++finding) {
+  char const* used_characters[50] = {nullptr};
+  size_t used_character_count = 0;
+  for (char const *finding_char = needle.data(); *finding_char; ++finding_char) {
     bool found_finding = false;
-    for (char const *hay = haystack.data(); *hay; ++hay) {
-      if (*finding == *hay) {
-        if (std::find(used_characters.begin(), used_characters.end(), hay) != used_characters.end()) {
+    for (char const *hay_char = haystack.data(); *hay_char; ++hay_char) {
+      if (*finding_char < *hay_char) {
+        // Since the haystack is sorted, we know it's not in the rest of the
+        // haystack.
+        return false;
+      }
+      if (*finding_char == *hay_char) {
+        if (std::find(used_characters, used_characters + used_character_count, hay_char) != used_characters + used_character_count) {
           continue;
         }
-        used_characters.push_back(hay);
+        used_characters[used_character_count++] = hay_char;
         found_finding = true;
         break;
       }
@@ -92,15 +102,29 @@ find(std::string_view needle, std::string_view haystack)
 
 // Detect all the words in the given dictionary that are in word_to_analyze.
 std::vector<std::string>
-find_unique_words(std::vector<std::string> const &dictionary, std::string_view word_to_analyze)
+find_words_in_thanksgiving(std::vector<std::string> const &dictionary, std::string_view word_to_analyze)
 {
   std::vector<std::string> unique_words;
   for (auto const &word: dictionary) {
-    if (find(word, word_to_analyze)) {
+    if (word_is_in(word, word_to_analyze)) {
       unique_words.push_back(word);
     }
   }
   return unique_words;
+}
+
+void
+run_tests()
+{
+  assert(word_is_in("abc", "abc"));
+  assert(word_is_in("abc", "abcdz"));
+  assert(word_is_in("abc", "abcduz"));
+  assert(word_is_in("cab", "abcduz"));
+  assert(!word_is_in("cat", "abcduz"));
+
+  assert(word_is_in("giving", WORD_TO_ANALYZE));
+  assert(word_is_in("sat", WORD_TO_ANALYZE));
+  assert(!word_is_in("never", WORD_TO_ANALYZE));
 }
 
 int
@@ -110,6 +134,10 @@ main(int argc, char *argv[])
   if (argc == 2) {
     dictionary_file = argv[1];
   }
+
+#if TEST
+  run_tests();
+#endif
 
 #if TIMING
   auto const start = std::chrono::high_resolution_clock::now();
@@ -123,7 +151,7 @@ main(int argc, char *argv[])
 #if TIMING
   auto const after_parse = std::chrono::high_resolution_clock::now();
 #endif
-  auto unique_words = find_unique_words(dictionary, WORD_TO_ANALYZE);
+  auto unique_words = find_words_in_thanksgiving(dictionary, WORD_TO_ANALYZE);
 #if TIMING
   auto const after_find_words = std::chrono::high_resolution_clock::now();
 #endif
