@@ -11,7 +11,7 @@
 #include <sys/uio.h>
 #include <unistd.h>
 
-std::string_view DEFAULT_DICTIONARY_FILE = "en-common.wl";
+std::string_view DEFAULT_DICTIONARY_FILE = "en-filtered.wl";
 std::string_view WORD_TO_ANALYZE = "thanksgiving";
 
 // Parse a dictionary file into an unordered set of words.
