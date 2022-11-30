@@ -6,6 +6,11 @@
 #include <unordered_set>
 #include <vector>
 
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/uio.h>
+#include <unistd.h>
+
 std::string_view DEFAULT_DICTIONARY_FILE = "en-common.wl";
 std::string_view WORD_TO_ANALYZE = "thanksgiving";
 
@@ -15,15 +20,49 @@ parse_dictionary(std::string_view filename)
 {
   std::vector<std::string> words;
   words.reserve(250'000);
-  std::ifstream file(filename.data());
-  if (!file.is_open()) {
-    std::cerr << "Unable to open file: " << filename << std::endl;
-    return words;
+
+  // From https://stackoverflow.com/a/17925143/629530
+  // The author says he was inspired by the code for wc.
+  static const auto BUFFER_SIZE = 16 * 1024;
+  int fd = ::open(filename.data(), O_RDONLY);
+  if (fd == -1) {
+    std::cerr << "Error opening file: " << filename << std::endl;
+    exit(1);
   }
-  std::string word;
-  while (file >> word) {
-    words.push_back(word);
+
+#if defined(__linux__)
+  /* Advise the kernel of our access pattern.  */
+  posix_fadvise(fd, 0, 0, 1); // FDADVICE_SEQUENTIAL
+#endif
+
+  char buf[BUFFER_SIZE + 1];
+
+  std::string leftover;
+  while (size_t bytes_read = ::read(fd, buf, BUFFER_SIZE)) {
+    if (bytes_read == (size_t)-1) {
+      std::cerr << "Error reading a line from file: " << filename << std::endl;
+      exit(1);
+    }
+    if (!bytes_read)
+      break;
+
+
+    // Split the buffer into lines terminated by '\n'.
+    char *line = buf;
+    char *line_end = (char*)memchr(line, '\n', bytes_read);
+    while (line_end) {
+      if (!leftover.empty()) {
+        words.push_back(leftover + std::string(line, line_end - line));
+        leftover.clear();
+      } else {
+        words.push_back(std::string{line, static_cast<size_t>(line_end - line)});
+      }
+      line = line_end + 1;
+      line_end = (char*)memchr(line, '\n', buf + bytes_read - line);
+    }
+    leftover = std::string{line, static_cast<size_t>(buf + bytes_read - line)};
   }
+
   return words;
 }
 
