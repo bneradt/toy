@@ -77,25 +77,18 @@ word_is_in(std::string_view needle, std::string_view haystack)
   char const* used_characters[50] = {nullptr};
   size_t used_character_count = 0;
   for (char const *finding_char = needle.data(); *finding_char; ++finding_char) {
-    bool found_finding = false;
-    for (char const *hay_char = haystack.data(); *hay_char; ++hay_char) {
-      if (*finding_char < *hay_char) {
-        // Since the haystack is sorted, we know it's not in the rest of the
-        // haystack.
-        return false;
-      }
-      if (*finding_char == *hay_char) {
-        if (std::find(used_characters, used_characters + used_character_count, hay_char) != used_characters + used_character_count) {
-          continue;
-        }
-        used_characters[used_character_count++] = hay_char;
-        found_finding = true;
-        break;
-      }
-    }
-    if (!found_finding) {
+    auto start = std::lower_bound(haystack.begin(), haystack.end(), *finding_char);
+    if (start == haystack.end() || *start != *finding_char) {
       return false;
     }
+    // Make sure we haven't used the letter already.
+    while (std::find(used_characters, used_characters + used_character_count, start) != used_characters + used_character_count) {
+      ++start;
+      if (start == haystack.end() || *start != *finding_char) {
+        return false;
+      }
+    }
+    used_characters[used_character_count++] = start;
   }
   return true;
 }
@@ -120,6 +113,7 @@ run_tests()
   assert(word_is_in("abc", "abcdz"));
   assert(word_is_in("abc", "abcduz"));
   assert(word_is_in("cab", "abcduz"));
+  assert(word_is_in("cab", "aabccduz"));
   assert(!word_is_in("cat", "abcduz"));
 
   assert(word_is_in("giving", WORD_TO_ANALYZE));
@@ -162,11 +156,11 @@ main(int argc, char *argv[])
 
 #if TIMING
   std::cerr << "Parsed dictionary in "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(after_parse - start).count()
-            << "ms" << std::endl;
+            << std::chrono::duration_cast<std::chrono::microseconds>(after_parse - start).count()
+            << "us" << std::endl;
   std::cerr << "Found words in "
-            << std::chrono::duration_cast<std::chrono::milliseconds>(after_find_words - after_parse).count()
-            << "ms" << std::endl;
+            << std::chrono::duration_cast<std::chrono::microseconds>(after_find_words - after_parse).count()
+            << "us" << std::endl;
 #endif
 
   return 0;
