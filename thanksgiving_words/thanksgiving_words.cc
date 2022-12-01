@@ -1,6 +1,8 @@
 #if TIMING
 #include <chrono>
 #endif
+// None of these helped at all...even made it worse.
+//#include <execution>
 #include <iostream>
 #include <memory>
 #include <string>
@@ -10,6 +12,7 @@
 #if TEST
 #include <assert.h>
 #endif
+#include <cstring>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/uio.h>
@@ -125,15 +128,18 @@ std::vector<std::string>
 find_words_in_thanksgiving(WordList const &word_list, std::string_view word_to_analyze)
 {
   std::vector<std::string> unique_words;
-  for (auto const &word: word_list) {
-    if (strlen(word) == 1) {
-      // Skip single-letter words.
-      continue;
-    }
-    if (word_is_in(word, word_to_analyze)) {
-      unique_words.push_back(word);
-    }
-  }
+  std::for_each(
+    word_list.begin(),
+    word_list.end(),
+    [&unique_words, &word_to_analyze](word_t const &word) {
+      // Skip one and two character words.
+      if (word[1] == '\0' || word[2] == '\0') {
+        return;
+      }
+      if (word_is_in(word, word_to_analyze)) {
+        unique_words.push_back(word);
+      }
+    });
   return unique_words;
 }
 
@@ -184,8 +190,7 @@ main(int argc, char *argv[])
 
   std::cout << "Found " << unique_words.size() << " words in thanksgiving" << std::endl;
   for (auto const &word: unique_words) {
-    //std::cout << word << std::endl;
-    (void)word;
+    std::cout << word << std::endl;
   }
 
 #if TIMING
