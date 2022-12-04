@@ -1,8 +1,12 @@
 #include <cassert>
+#include <chrono>
 #include <fstream>
 #include <iostream>
 #include <string_view>
 #include <vector>
+
+using std::chrono::duration_cast;
+using std::chrono::microseconds;
 
 class Range {
 public:
@@ -142,6 +146,9 @@ main(int argc, char *argv[])
     return 1;
   }
 
+#if TIMING
+  auto const start_time = std::chrono::high_resolution_clock::now();
+#endif
   FileProcessor processor{argv[1]};
   if (!processor.is_valid()) {
     std::cerr << "Could not open file " << argv[1] << std::endl;
@@ -159,7 +166,13 @@ main(int argc, char *argv[])
       ++overlap_count;
     }
   }
+#if TIMING
+  auto const end_time = std::chrono::high_resolution_clock::now();
+#endif
 
   std::cout << "subsets: " << subset_count << std::endl;
   std::cout << "overlaps: " << overlap_count << std::endl;
+#if TIMING
+  std::cout << "time: " << duration_cast<microseconds>(end_time - start_time).count() << "us" << std::endl;
+#endif
 }
