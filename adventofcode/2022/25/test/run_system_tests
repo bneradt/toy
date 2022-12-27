@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+
+TARGET=compute_snafu
+TEST_INPUT=test/test_input.txt
+INPUT=input.txt
+
+fail()
+{
+  echo $1
+  exit 1
+}
+[ -f $TARGET ] || fail "$TARGET not found"
+[ -x $TARGET ] || fail "$TARGET is not executable"
+[ -f $TEST_INPUT ] || fail "$TEST_INPUT not found"
+[ -f $INPUT ] || fail "INPUT not found"
+
+test_stack_output=$(./$TARGET $TEST_INPUT)
+[ "$test_stack_output" = "2=-1=0" ] || fail "${TEST_INPUT}: Expected 2=-1=0, got $test_stack_output"
+
+test_stack_output=$(./$TARGET $INPUT)
+[ "$test_stack_output" = "2=001=-2=--0212-22-2" ] || fail "${TEST_INPUT}: Expected 2=001=-2=--0212-22-2, got $test_stack_output"
+
+echo "All system tests passed"
