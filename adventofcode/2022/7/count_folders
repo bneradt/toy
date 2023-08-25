@@ -5,7 +5,7 @@
 import argparse
 import os
 import sys
-from typing import List, Optional
+from typing import List, Optional, Set
 
 class Directory:
     """Represents a directory in a file system."""
@@ -42,20 +42,6 @@ class Directory:
             directory = directory._parent
         return absolute_path
     
-    def add_directory(self, directory: 'Directory') -> None:
-        """Adds a directory to the current directory.
-
-        :param directory: The directory to add.
-        """
-        self._child_directories.append(directory)
-    
-    def add_file(self, file: 'File') -> None:
-        """Adds a file to the current directory.
-
-        :param file: The file to add.
-        """
-        self._child_files.append(file)
-    
     def get_size(self) -> int:
         """Returns the size of the directory.
 
@@ -64,17 +50,19 @@ class Directory:
         >>> root = Directory('/')
         >>> root.get_size()
         0
-        >>> root.add_file(File('file1', 10, root))
+        >>> root.add_file_by_name('file1', 10)
+        /file1
         >>> root.get_size()
         10
-        >>> root.add_file(File('file2', 20, root))
+        >>> root.add_file_by_name('file2', 20)
+        /file2
         >>> root.get_size()
         30
-        >>> dir1 = Directory('dir1')
-        >>> root.add_directory(dir1)
+        >>> dir1 = root.add_directory_by_name('dir1')
         >>> root.get_size()
         30
-        >>> dir1.add_file(File('file3', 30, dir1))
+        >>> dir1.add_file_by_name('file3', 30)
+        /dir1/file3
         >>> dir1.get_size()
         30
         >>> root.get_size()
@@ -157,7 +145,25 @@ class Directory:
                 return True
         return False
     
-    def add_child_directory(self, name: str) -> 'Directory':
+    def has_child_file_with_name(self, file: str) -> bool:
+        """Returns whether the directory has a child file with the given name.
+
+        :param file: The name of the file to check.
+        :return: Whether the directory has a child file with the given name.
+
+        >>> root = Directory('/')
+        >>> root.has_child_file_with_name('file1')
+        False
+        >>> file1 = File('file1', 10, root)
+        >>> root.has_child_file_with_name('file1')
+        True
+        """
+        for child_file in self._child_files:
+            if child_file._name == file:
+                return True
+        return False
+    
+    def add_directory_by_name(self, name: str) -> 'Directory':
         """Adds a child directory with the given name to the directory.
 
         :param name: The name of the directory to add.
@@ -165,11 +171,11 @@ class Directory:
         :raises ValueError: If the directory already has a child directory with the given name.
 
         >>> root = Directory('/')
-        >>> root.add_child_directory('dir1')
+        >>> root.add_directory_by_name('dir1')
         /dir1
         >>> root.has_child_directory_with_name('dir1')
         True
-        >>> root.add_child_directory('dir1')
+        >>> root.add_directory_by_name('dir1')
         Traceback (most recent call last):
         ...
         ValueError: The directory already has a child directory with the name "dir1".
@@ -177,8 +183,183 @@ class Directory:
         if self.has_child_directory_with_name(name):
             raise ValueError(f'The directory already has a child directory with the name "{name}".')
         directory: Directory = Directory(name, self)
-        self._child_directories.append(directory)
+        # The constructor of Directory adds itself to self._child_directories.
         return directory
+    
+    def add_file_by_name(self, name: str, size: int) -> 'File':
+        """Adds a child file with the given name to the directory.
+
+        :param name: The name of the file to add.
+        :param size: The size of the file to add.
+        :return: The added file.
+        :raises ValueError: If the directory already has a child file with the given name.
+
+        >>> root = Directory('/')
+        >>> root.add_file_by_name('file1', 0)
+        /file1
+        >>> root.has_child_file_with_name('file1')
+        True
+        >>> root.add_file_by_name('file1', 100)
+        Traceback (most recent call last):
+        ...
+        ValueError: The directory already has a child file with the name "file1".
+        """
+        if self.has_child_file_with_name(name):
+            raise ValueError(f'The directory already has a child file with the name "{name}".')
+        file: File = File(name, size, self)
+        # The File constructor will add itself to the directory's list of child files.
+        return file
+    
+    def count_sizes_of_directories(self, max_dir_size: int) -> int:
+        """Counts the size of directories with a size less than or equal to the given size.
+
+        :param max_dir_size: The maximum size of a directory to count. A value of -1 means that
+            all directories should be counted.
+        :return: The sum of the sizes of all directories with a size less than
+        or equal @a max_dir_size.
+
+        >>> root = Directory('/')
+        >>> root.count_sizes_of_directories(100)
+        0
+        >>> dir1 = Directory('dir1', root)
+        >>> root.count_sizes_of_directories(100)
+        0
+        >>> dir1.add_file_by_name('file1', 10)
+        /dir1/file1
+        >>> dir1.count_sizes_of_directories(100)
+        10
+        >>> root.count_sizes_of_directories(100)
+        10
+        >>> dir1.add_file_by_name('file2', 200)
+        /dir1/file2
+        >>> root.count_sizes_of_directories(100)
+        0
+        >>> dir2 = Directory('dir2', dir1)
+        >>> dir2.add_file_by_name('file3', 10)
+        /dir1/dir2/file3
+        >>> dir2.count_sizes_of_directories(100)
+        10
+        >>> dir1.count_sizes_of_directories(100)
+        10
+        >>> root.count_sizes_of_directories(100)
+        10
+        >>> root.count_sizes_of_directories(-1)
+        220
+        """
+        direct_file_size: int = sum(child_file._size for child_file in self._child_files)
+        
+        child_directory_size: int = 0
+        for child_directory in self._child_directories:
+            child_directory_size += child_directory.count_sizes_of_directories(max_dir_size)
+        
+        if max_dir_size == -1 or (direct_file_size + child_directory_size <= max_dir_size):
+            return direct_file_size + child_directory_size
+        else:
+            return child_directory_size
+    
+    def get_all_leaf_files(self) -> List['File']:
+        """Returns a list of all files of this directory or any of its descendants.
+
+        :return: A list of all files of this directory or any of its descendants.
+
+        >>> root = Directory('/')
+        >>> root.get_all_leaf_files()
+        []
+        >>> file1 = File('file1', 10, root)
+        >>> root.get_all_leaf_files()
+        [/file1]
+        >>> dir1 = Directory('dir1', root)
+        >>> root.get_all_leaf_files()
+        [/file1]
+        >>> dir1.add_file_by_name('file2', 10)
+        /dir1/file2
+        >>> root.get_all_leaf_files()
+        [/file1, /dir1/file2]
+        """
+        files: Set[Directory] = set(self._child_files)
+        for child_directory in self._child_directories:
+            files = files.union(child_directory.get_all_leaf_files())
+        return list(files)
+
+    def count_all_leaf_file_sizes(self) -> int:
+        """Count and sum the sizes of all leaf files.
+
+        :return: The sum of the sizes of all leaf files.
+
+        >>> root = Directory('/')
+        >>> root.count_all_leaf_file_sizes()
+        0
+        >>> file1 = File('file1', 10, root)
+        >>> root.count_all_leaf_file_sizes()
+        10
+        >>> dir1 = Directory('dir1', root)
+        >>> root.count_all_leaf_file_sizes()
+        10
+        >>> dir1.add_file_by_name('file2', 10)
+        /dir1/file2
+        >>> root.count_all_leaf_file_sizes()
+        20
+        """
+        all_files = self.get_all_leaf_files()
+        return sum(file._size for file in all_files)
+
+    def get_all_ancestor_directories(self) -> List['Directory']:
+        """Returns a list of all ancestor directories of this directory.
+
+        :return: A list of all ancestor directories of this directory.
+
+        >>> root = Directory('/')
+        >>> root.get_all_ancestor_directories()
+        []
+        >>> dir1 = Directory('dir1', root)
+        >>> dir1.get_all_ancestor_directories()
+        []
+        >>> dir2 = Directory('dir2', dir1)
+        >>> dir2.get_all_ancestor_directories()
+        []
+        >>> dir1.get_all_ancestor_directories()
+        [/dir1/dir2]
+        >>> root.get_all_ancestor_directories()
+        [/dir1/dir2, /dir1]
+        """
+        ancestor_directories: Set[Directory] = set(self._child_directories)
+        for child_directory in self._child_directories:
+            ancestor_directories = ancestor_directories.union(child_directory.get_all_ancestor_directories())
+        return list(ancestor_directories)
+
+    def count_with_double_counting(self, max_dir_size: int) -> int:
+        """Counts the size of directories with a size less than or equal to the given size.
+
+        :param max_dir_size: The maximum size of a directory to count. A value of -1 means that
+            all directories should be counted.
+
+        :return: The sum of the sizes of all directories with a size less than
+        or equal @a max_dir_size.
+
+        >>> root = Directory('/')
+        >>> root.count_with_double_counting(100)
+        0
+        >>> dir1 = Directory('dir1', root)
+        >>> root.count_with_double_counting(100)
+        0
+        >>> dir1.add_file_by_name('file1', 10)
+        /dir1/file1
+        >>> dir1.count_with_double_counting(100)
+        10
+        >>> root.count_with_double_counting(100)
+        20
+        """
+        ret = 0
+        my_size = self.count_all_leaf_file_sizes()
+        if max_dir_size == -1 or (my_size <= max_dir_size):
+            ret += my_size
+        all_ancestors = self.get_all_ancestor_directories()
+        for ancestor in all_ancestors:
+            ancestor_size = ancestor.count_all_leaf_file_sizes()
+            if max_dir_size == -1 or ancestor_size <= max_dir_size:
+                ret += ancestor_size
+        return ret
+
 
 class File:
     """Represents a file in a file system."""
@@ -199,6 +380,7 @@ class File:
         self._name: str = name
         self._size: int = size
         self._parent: Directory = parent
+        self._parent._child_files.append(self)
     
     def __str__(self) -> str:
         """Returns a string representation of the file."""
@@ -234,12 +416,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         '-m', '--max-dir-size',
         type=int,
-        default=0,
-        help='The maximum size of a directory to include in the sum.'
+        default=-1,
+        help='The maximum size of a directory to include in the sum. A value of -1 means that all '
+                'directories should be included.'
     )
 
     parser.add_argument(
-        '-i', '--input',
+        'input',
         type=argparse.FileType('r'),
         default=sys.stdin,
         help='The input file with terminal output.'
@@ -249,13 +432,35 @@ def parse_args() -> argparse.Namespace:
 
 
 def parse_terminal_output(lines: List[str]) -> Directory:
-    """Parse the terminal output to get the file system."""
+    """Parse the terminal output to get the file system.
+
+    :param lines: The lines of the terminal output.
+    :return: The root directory of the file system.
+    :raises ValueError: If the terminal output is invalid.
+
+    >>> root = parse_terminal_output([
+    ...     '$ cd /',
+    ...     '$ ls',
+    ...     'dir a',
+    ...     '10 file1',
+    ...     '20 file2',
+    ...     '$ cd a',
+    ...     '$ ls',
+    ...     'dir b',
+    ...     '30 file3'])
+    >>> root.get_size()
+    60
+    """
 
     root: Directory = Directory('/')
     current_directory: Directory = root
     
+    is_parsing_ls: bool = False
+    line_number: int = 0
     for line in lines:
+        line_number += 1
         if line.startswith('$ '):
+            is_parsing_ls = False
             command = line[2:].strip()
             if command.startswith('cd'):
                 destination = command[3:].strip()
@@ -267,10 +472,30 @@ def parse_terminal_output(lines: List[str]) -> Directory:
                     if current_directory.has_child_directory_with_name(destination):
                         current_directory = current_directory.get_child_directory(destination)
                     else:
-                        current_directory = current_directory.add_child_directory(destination)
+                        current_directory = current_directory.add_directory_by_name(destination)
             elif command == 'ls':
-                # TODO: Implement
-                pass
+                is_parsing_ls = True
+            else:
+                raise ValueError(f'Unknown command at line {line_number}: {command}:\n{line}')
+        else:
+            if not is_parsing_ls:
+                raise ValueError(f'Non-command line when not parsing ls output at line {line_number}:\n{line}')
+            split_line = line.split()
+            if len(split_line) != 2:
+                raise ValueError(f'Invalid number of words in ls output at line {line_number}:\n{line}')
+            first_word = split_line[0]
+            if first_word == "dir":
+                dir_name = split_line[1]
+                if not current_directory.has_child_directory_with_name(dir_name):
+                    current_directory.add_directory_by_name(dir_name)
+            else:
+                try:
+                    file_size = int(first_word)
+                except ValueError:
+                    raise ValueError(f'Invalid file size at line {line_number}:\n{line}')
+                file_name = split_line[1]
+                current_directory.add_file_by_name(file_name, file_size)
+                
 
     return root
 
@@ -280,6 +505,8 @@ def main() -> int:
     args = parse_args()
 
     root = parse_terminal_output(args.input.readlines())
+    size = root.count_with_double_counting(args.max_dir_size)
+    print(size)
 
     return 0
 
@@ -287,3 +514,4 @@ def main() -> int:
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
+    sys.exit(main())
