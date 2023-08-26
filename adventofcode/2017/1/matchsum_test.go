@@ -33,9 +33,9 @@ func TestStringToDigits(t *testing.T) {
 
 func TestSumMatchingDigits(t *testing.T) {
 	testCases := []struct {
-		input    []int
+		input       []int
 		expectedSum int
-	} {
+	}{
 		{[]int{1, 1, 1, 1}, 4},
 		{[]int{1, 1, 2, 2}, 3},
 		{[]int{1, 2, 3, 4}, 0},
@@ -43,9 +43,29 @@ func TestSumMatchingDigits(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		actual := SumMatchingDigits(tc.input)
+		actual := SumMatchingDigits(tc.input, !USE_ACROSS)
 		if actual != tc.expectedSum {
-			t.Errorf("SumMatchingDigits(%v) expected %d, got %d", tc.input, tc.expectedSum, actual)
+			t.Errorf("SumMatchingDigits(%v, !USE_ACROSS) expected %d, got %d", tc.input, tc.expectedSum, actual)
+		}
+	}
+}
+
+func TestSumMatchingDigitsUseAcross(t *testing.T) {
+	testCases := []struct {
+		input       []int
+		expectedSum int
+	}{
+		{[]int{1, 2, 1, 2}, 6},
+		{[]int{1, 2, 2, 1}, 0},
+		{[]int{1, 2, 3, 4, 2, 5}, 4},
+		{[]int{1, 2, 3, 1, 2, 3}, 12},
+		{[]int{1, 2, 1, 3, 1, 4, 1, 5}, 4},
+	}
+
+	for _, tc := range testCases {
+		actual := SumMatchingDigits(tc.input, USE_ACROSS)
+		if actual != tc.expectedSum {
+			t.Errorf("SumMatchingDigits(%v, USE_ACROSS) expected %d, got %d", tc.input, tc.expectedSum, actual)
 		}
 	}
 }
