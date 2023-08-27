@@ -11,6 +11,7 @@ func TestParseLine(t *testing.T) {
 		{"5 1 9 5", 1, 9},
 		{"7 5 3", 3, 7},
 		{"2 4 6 8", 2, 8},
+		{"104 240 147", 104, 240},
 	}
 
 	for _, tc := range testCases {
