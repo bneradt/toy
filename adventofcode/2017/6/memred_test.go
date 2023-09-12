@@ -3,11 +3,15 @@ package main
 import "testing"
 
 func TestRedistribute(t *testing.T) {
-	m := Memory{}
+	m := NewMemory()
 	m.AddBank(0)
 	m.AddBank(2)
 	m.AddBank(7)
 	m.AddBank(0)
+
+	if m.RepeatIndex != -1 {
+		t.Errorf("Expected RepeatIndex to be initialized to -1, but was: %d\n", m.RepeatIndex)
+	}
 
 	if m.GetLargestBank() != 2 {
 		t.Errorf("The largest bank should be index 2, not %d", m.GetLargestBank())
@@ -42,5 +46,11 @@ func TestRedistribute(t *testing.T) {
 	if m.RedistributionCount != 5 {
 		t.Errorf("The RedistributionCount should show 5, but instead has %d.\n",
 			m.RedistributionCount)
+	}
+	if m.RepeatIndex != 1 {
+		t.Errorf("Expected repeat index to be 1, but was: %d\n", m.RepeatIndex)
+	}
+	if m.GetLoopCount() != 4 {
+		t.Errorf("Expected loop count to be 4, was: %d\n", m.GetLoopCount())
 	}
 }

@@ -14,7 +14,12 @@ type Memory struct {
 	Banks               []int
 	History             [][]int
 	RedistributionCount int
+	RepeatIndex         int
 	IsDone              bool
+}
+
+func NewMemory() *Memory {
+	return &Memory{RepeatIndex: -1}
 }
 
 // Return the memory bank with the most blocks.
@@ -32,10 +37,11 @@ func (m *Memory) AddBank(bankSize int) {
 	m.Banks = append(m.Banks, bankSize)
 }
 
-// Detect whether the given memory banks is a repeat of a set in history.
-// Returns true if the given banks is a repeat, false otherwise.
-func (m *Memory) IsRepeat(banks []int) bool {
-	for _, historicBanks := range m.History {
+// Detect the index wherein there is a repeat with the banks input.
+// Returns -1 if there is no repeat, the index in the history to the repeat if
+// it exists.
+func (m *Memory) GetRepeatIndex(banks []int) int {
+	for h, historicBanks := range m.History {
 		matches := true
 		for i, bank := range banks {
 			if bank != historicBanks[i] {
@@ -44,10 +50,23 @@ func (m *Memory) IsRepeat(banks []int) bool {
 			}
 		}
 		if matches {
-			return true
+			return h
 		}
 	}
-	return false
+	return -1
+}
+
+// Set the RepeatIndex to the give value.
+func (m *Memory) SetRepeatIndex(i int) {
+	m.IsDone = true
+	m.RepeatIndex = i
+}
+
+func (m *Memory) GetLoopCount() int {
+	if !m.IsDone {
+		return 0
+	}
+	return m.RedistributionCount - m.RepeatIndex
 }
 
 // Redistribute the memory.
@@ -68,8 +87,9 @@ func (m *Memory) Redistribute() bool {
 	for i, j := 0, startingBank; i < numBlocks; i, j = i+1, (j+1)%len(m.Banks) {
 		m.Banks[j]++
 	}
-	if m.IsRepeat(m.Banks) {
-		m.IsDone = true
+	repeatIndex := m.GetRepeatIndex(m.Banks)
+	if repeatIndex != -1 {
+		m.SetRepeatIndex(repeatIndex)
 	} else {
 		m.History = append(m.History, slices.Clone(m.Banks))
 	}
@@ -99,6 +119,7 @@ func ParseInput(filename string) Memory {
 }
 
 func main() {
+	countLoopSize := flag.Bool("l", false, "Count the loop size rather than redistribution size.")
 	flag.Parse()
 	if flag.NArg() != 1 {
 		log.Fatalln("A file containing the initial memory banks must be provided.")
@@ -107,5 +128,9 @@ func main() {
 	m := ParseInput(filename)
 	for !m.Redistribute() {
 	}
-	fmt.Println(m.RedistributionCount)
+	if *countLoopSize {
+		fmt.Println(m.GetLoopCount())
+	} else {
+		fmt.Println(m.RedistributionCount)
+	}
 }
