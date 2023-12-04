@@ -1,0 +1,245 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Parse and engine schematic.
+"""
+
+
+import argparse
+import sys
+
+
+class Schematic:
+    """Represents an engine schematic."""
+
+    def __init__(self) -> None:
+        """Initialize the schematic."""
+        self._rows: list[list[int]] = []
+        self._row_count: int = 0
+        self._column_count: int = 0
+
+    def _parse_line(self, line: str) -> None:
+        """Parse a line of the schematic.
+
+        :param line: The line to parse.
+        :return: The parsed line.
+        :examples:
+          >>> s = Schematic()
+          >>> s._parse_line('467..114..')
+          >>> s._rows[0]
+          ['4', '6', '7', '.', '.', '1', '1', '4', '.', '.']
+        """
+        stripped = line.strip()
+        items = [c for c in stripped]
+        self._rows.append(items)
+        self._column_count = len(items)
+        self._row_count += 1
+
+    def parse_schematic(self, file_path: str) -> None:
+        """Parse the schematic file.
+
+        :param file_path: The path to the schematic file.
+        """
+        with open(file_path, 'r') as file:
+            for line in file:
+                self._parse_line(line)
+
+    def print_schematic(self) -> None:
+        """Print the schematic."""
+        for row in self._rows:
+            print(''.join(row))
+
+    @staticmethod
+    def _is_integer(char: str) -> bool:
+        """Check whether the character is an integer.
+
+      :param char: The character to check.
+      :return: True if the character is an integer, False otherwise.
+
+      :examples:
+        >>> Schematic._is_integer('1')
+        True
+        >>> Schematic._is_integer('0')
+        True
+        >>> Schematic._is_integer('9')
+        True
+        >>> Schematic._is_integer('a')
+        False
+        >>> Schematic._is_integer(' ')
+        False
+        >>> Schematic._is_integer('*')
+        False
+        >>> Schematic._is_integer('.')
+        False
+      """
+        return char in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+    @staticmethod
+    def _is_symbol(char: str) -> bool:
+        """Check whether the character is a symbol.
+
+        All non-digit and non-dot characters are symbols.
+
+        :param char: The character to check.
+        :return: True if the character is a symbol, False otherwise.
+
+        :examples:
+          >>> Schematic._is_symbol('*')
+          True
+          >>> Schematic._is_symbol('+')
+          True
+          >>> Schematic._is_symbol('.')
+          False
+          >>> Schematic._is_symbol('a')
+          True
+          >>> Schematic._is_symbol(' ')
+          True
+          >>> Schematic._is_symbol('1')
+          False
+          >>> Schematic._is_symbol('0')
+          False
+          >>> Schematic._is_symbol('9')
+          False
+        """
+        return char not in ['.', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
+
+    def count(self) -> int:
+        """Count the values of the schematic.
+
+        This uses a counting method that returns all the values that are
+        adjacent to a symbol, not including dot.
+
+        :return: The count of the schematic.
+
+        :examples:
+          >>> schematic = Schematic()
+          >>> schematic._parse_line('467..114..')
+          >>> schematic._parse_line('...*......')
+          >>> schematic._parse_line('..35..633.')
+          >>> schematic._parse_line('......#...')
+          >>> schematic._parse_line('617*......')
+          >>> schematic._parse_line('.....+.58.')
+          >>> schematic._parse_line('..592.....')
+          >>> schematic._parse_line('......755.')
+          >>> schematic._parse_line('...$.*....')
+          >>> schematic._parse_line('.664.598..')
+          >>> schematic.count()
+          4361
+        """
+        count: int = 0
+        for row in range(len(self._rows)):
+            finding_number: bool = False
+            first_number_index: int = -1
+            for column in range(len(self._rows[row])):
+                this_char = self._rows[row][column]
+                finished_number = False
+                if not Schematic._is_integer(this_char):
+                    continue
+
+                # The current square is a number.
+                if not finding_number:
+                    # This was the start of a number.
+                    finding_number = True
+                    first_number_index = column
+
+                # Is this the end of the number?
+                if column == self._column_count - 1:
+                    finished_number = True
+                else:
+                    next_char = self._rows[row][column + 1]
+                    if not Schematic._is_integer(next_char):
+                        finished_number = True
+
+                if not finished_number:
+                    # Keep looking for the end of the number.
+                    continue
+
+                # We finished a number.
+                last_number_index = column
+                
+                finding_number = False
+                this_value = int(''.join(self._rows[row][first_number_index:last_number_index+1]))
+
+                # Check all adjacent values for a symbol. If it is a symbol, add
+                # this value to the count and continue to the next value.
+                if first_number_index > 0:
+                    
+                    # Check the value directly to the left for a symbol.
+                    if Schematic._is_symbol(self._rows[row][first_number_index - 1]):
+                        count += this_value
+                        continue
+
+                    if row > 0:
+                        # Check the value top left for a symbol.
+                        if Schematic._is_symbol(self._rows[row - 1][first_number_index - 1]):
+                            count += this_value
+                            continue
+
+                    if row < self._row_count - 1:
+                        # Check the value bottom left for a symbol.
+                        if Schematic._is_symbol(self._rows[row + 1][first_number_index - 1]):
+                            count += this_value
+                            continue
+
+                if last_number_index < self._column_count - 1:
+                    # Check teh number directly to the right for a symbol.
+                    if Schematic._is_symbol(self._rows[row][last_number_index + 1]):
+                        count += this_value
+                        continue
+
+                    if row > 0:
+                        # Check the value top right for a symbol.
+                        if Schematic._is_symbol(self._rows[row - 1][last_number_index + 1]):
+                            count += this_value
+                            continue
+                    if row < self._row_count - 1:
+                        # Check the value bottom right for a symbol.
+                        if Schematic._is_symbol(self._rows[row + 1][last_number_index + 1]):
+                            count += this_value
+                            continue
+                    
+                if row > 0:
+                    found_symbol = False
+                    # Check all the values directly above for a symbol.
+                    for i in range(first_number_index, last_number_index + 1):
+                        if Schematic._is_symbol(self._rows[row - 1][i]):
+                            count += this_value
+                            found_symbol = True
+                            break
+                    if found_symbol:
+                        continue
+                if row < self._row_count - 1:
+                    found_symbol = False
+                    # Check all the values directly below for a symbol.
+                    for i in range(first_number_index, last_number_index + 1):
+                        if Schematic._is_symbol(self._rows[row + 1][i]):
+                            count += this_value
+                            found_symbol = True
+                            break
+                    if found_symbol:
+                        continue
+        return count
+
+
+def parse_args() -> argparse.Namespace:
+    """Parse command line arguments.
+
+    :return: The parsed arguments.
+    """
+    parser = argparse.ArgumentParser(description='Parse an engine schematic.')
+    parser.add_argument('filname', help='The path to the schematic file.')
+    return parser.parse_args()
+
+def main():
+    args = parse_args()
+
+    schematic = Schematic()
+    schematic.parse_schematic(args.filname)
+    print(schematic.count())
+
+
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()
+
+    sys.exit(main())
