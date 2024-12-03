@@ -7,6 +7,7 @@ def is_safe(levels: List[int]) -> bool:
     '''Return whether the report is safe.
 
     :params levels: The levels to analyze.
+    :return: True if it is safe, false otherwise.
     :examples:
     
     # Must have at least two values.
@@ -64,6 +65,39 @@ def is_safe(levels: List[int]) -> bool:
 
     return True
 
+def is_safe_after_dampening(levels: List[int]) -> bool:
+    '''Apply dampening to see whether a report is safe.
+    :param levels: 
+    :params levels: The levels to analyze.
+    :return: True if safe after dampening, false otherwise.
+    # Must have at least two values.
+    >>> is_safe([])
+    False
+    >>> is_safe([1])
+    False
+    
+    >>> is_safe_after_dampening([7, 6, 4, 2, 1])
+    True
+    >>> is_safe_after_dampening([1, 2, 7, 8, 9])
+    False
+    >>> is_safe_after_dampening([9, 7, 6, 2, 1])
+    False
+    >>> is_safe_after_dampening([1, 3, 2, 4, 5])
+    True
+    >>> is_safe_after_dampening([8, 6, 4, 4, 1])
+    True
+    >>> is_safe_after_dampening([1, 3, 6, 7, 9])
+    True
+    '''
+
+    if is_safe(levels):
+        return True
+    for i in range(len(levels)):
+        subset = levels[0:i] + levels[i+1:]
+        if is_safe(subset):
+            return True
+    return False
+
 def main() -> int:
     '''Inspect the reports.
 
@@ -76,7 +110,7 @@ def main() -> int:
     safe_count = 0
     for line in open(filename, 'r'):
         levels = [int(i) for i in line.strip().split()]
-        if is_safe(levels):
+        if is_safe_after_dampening(levels):
             safe_count += 1
 
     print(safe_count)
