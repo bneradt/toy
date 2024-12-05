@@ -101,6 +101,55 @@ def count_all_xmas(word_search: List[List[str]]) -> int:
             count += count_xmas_from(word_search, row_index, column_index)
     return count
 
+def print_square(word_search: List[List[str]], row: int, column: int) -> None:
+    '''Print the square around (row, column).
+    :param word_search: The puzzle input.
+    :param row: The row of the center character to print the square.
+    :param column: The column of the center character to print the square.
+    '''
+    for r in [row-1, row, row+1]:
+        for c in [column-1, column, column+1]:
+            print(word_search[r][c], end='')
+        print()
+
+def count_all_x_mas(word_search: List[List[str]]) -> int:
+    '''Count the number of MAS described as an X in @a word_search.
+    :param word_search: The puzzle input.
+    :return: The number of times XMAS occurs in word_search.
+    :example:
+    >>> t =     [['M', '.', 'M']]
+    >>> t.append(['.', 'A', '.'])
+    >>> t.append(['S', '.', 'S'])
+    >>> count_all_x_mas(t)
+    1
+    >>> t =     [['M', 'X', 'M']]
+    >>> t.append(['A', 'A', 'S'])
+    >>> t.append(['M', 'X', 'S'])
+    >>> count_all_x_mas(t)
+    0
+    '''
+    count = 0
+    if len(word_search) < 3 or len(word_search[0]) < 3:
+        return 0
+    for row in range(1, len(word_search)-1):
+        if len(word_search[row]) < 3:
+            raise ValueError(f'A column is too short, row: {row}.')
+        for column in range(1, len(word_search[row]) - 1):
+            center = word_search[row][column]
+            if center != 'A':
+                continue
+            top_left = word_search[row-1][column-1]
+            bottom_left = word_search[row+1][column-1]
+            top_right = word_search[row-1][column+1]
+            bottom_right = word_search[row+1][column+1]
+
+            if (((top_left == 'M' and bottom_right == 'S') or (top_left == 'S' and bottom_right == 'M')) and
+                ((bottom_left == 'M' and top_right == 'S') or (bottom_left == 'S' and top_right == 'M'))):
+                    count += 1
+
+    return count
+
+
 
 def main() -> int:
     '''Find XMAS in the wordsearch.
@@ -114,7 +163,7 @@ def main() -> int:
         for char in line.strip():
             word_search[-1].append(char)
 
-    count = count_all_xmas(word_search)
+    count = count_all_x_mas(word_search)
     print(count)
     return 0
 
